@@ -1,0 +1,25 @@
+# REAL BASELINE — NOT RUN YET. Intended for GPU hardware.
+# Owner decision pending: start from pretrained COCO weights (yolov8n.pt,
+# requires a one-off download or a local copy, and offline: false or a local
+# path) vs. random init (yolov8n.yaml).
+experiment_name: baseline_yolov8n
+dataset: data/processed/detector/data.yaml
+model: yolov8n.pt
+pretrained: true
+imgsz: 640
+batch: 16
+epochs: 50
+patience: 10
+workers: 2
+device: "0"                # first CUDA GPU; use "cpu" only for debugging
+optimizer: SGD
+lr0: 0.01
+seed: 42
+deterministic: true
+output_dir: experiments/runs
+fraction: 1.0
+plots: true                # run dir is git-ignored; plots contain document images
+offline: false
+validate_dataset: true
+train_args:
+  fliplr: 0.0

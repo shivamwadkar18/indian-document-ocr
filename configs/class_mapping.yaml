@@ -1,0 +1,47 @@
+# Class-ID -> meaning mapping for the raw YOLO datasets.
+#
+# The datasets ship no class names. These mappings were assigned manually by
+# the project owner after inspecting the local visualizations
+# (scripts/visualize_annotations.py -> data/reports/visualizations/).
+# Verified: 2026-10-06.
+#
+# Fields:
+#   name:        short snake_case field identifier
+#   description: human-readable meaning as identified by the project owner
+# null = not identified. Do not fill a null by guessing.
+# Class IDs are per dataset: the same ID in aadhaar and pan is unrelated.
+#
+# Nothing in the codebase reads names from this file until the unified schema
+# is designed.
+
+aadhaar:
+  0:
+    name: aadhaar_number
+    description: Aadhaar Number
+  1:
+    name: date_of_birth
+    description: Date of Birth
+  2:
+    name: gender
+    description: Gender
+  3:
+    name: name
+    description: Name
+  4:
+    # UNKNOWN: deliberately left unidentified by the project owner. Do not guess.
+    name: null
+    description: null
+
+pan:
+  0:
+    name: date_of_birth
+    description: Date of Birth
+  1:
+    name: fathers_name
+    description: Father's Name
+  2:
+    name: name
+    description: Name
+  3:
+    name: pan_number
+    description: PAN Number

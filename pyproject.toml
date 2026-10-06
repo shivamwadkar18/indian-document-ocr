@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "indian-document-ocr"
+version = "0.1.0"
+description = "OCR and document understanding for Indian identity documents (Aadhaar, PAN, Driving Licence)."
+readme = "README.md"
+requires-python = ">=3.11"
+# Core runtime dependencies only. Everything here is CPU-only and GPU-agnostic.
+dependencies = [
+    "numpy>=1.26",
+    "Pillow>=10.0",
+    "PyYAML>=6.0",
+    "opencv-python>=4.10",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+# Data analysis / reporting helpers used by notebooks and future audit reports.
+analysis = [
+    "pandas>=2.1",
+    "matplotlib>=3.8",
+    "scikit-learn>=1.4",
+]
+# PyTorch is deliberately NOT a core dependency: the correct wheel depends on
+# the machine's CUDA / CPU setup. Prefer installing it via the selector at
+# https://pytorch.org/get-started/locally/ ; this extra is a CPU-default fallback.
+torch = [
+    "torch>=2.2",
+    "torchvision>=0.17",
+]
+# Field-detector training (Ultralytics YOLO). Install PyTorch first (see above)
+# so pip does not pick a torch build for you. Verified: 8.4.173 with
+# torch 2.14.1+cpu / torchvision 0.29.1+cpu on Python 3.11.
+detector = [
+    "ultralytics==8.4.173",
+]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"

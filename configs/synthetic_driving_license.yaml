@@ -1,0 +1,28 @@
+# Synthetic Driving Licence generator configuration (PLACEHOLDER).
+# The generator is not implemented yet; this file documents the intended knobs.
+# All identities and identifiers produced must be fictional.
+
+output_dir: data/synthetic/driving_license
+num_samples: 0          # nothing is generated until explicitly requested
+seed: 42
+
+identity:
+  # TODO(owner): decide how fictional licence numbers are made unmistakably
+  # non-real (e.g. reserved / invalid state code prefix).
+  licence_number_prefix: "XX"
+  vehicle_categories: [MCWG, LMV, MCWOG, TRANS]
+
+layouts: []             # TODO: layout templates (designed by us, fictional)
+fonts: []               # TODO: font files with licences permitting this use
+font_size_range: [14, 28]
+
+augmentation:
+  rotation_deg: [-5, 5]
+  perspective: 0.0
+  blur: 0.0
+  noise: 0.0
+  brightness: 0.0
+  contrast: 0.0
+  jpeg_quality: [60, 95]
+  shadow: 0.0
+  scan_artifacts: 0.0

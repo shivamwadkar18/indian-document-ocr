@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# SENSITIVE DATA — never commit identity documents or anything derived from them.
+# Directory skeletons are kept via .gitkeep; every other file is ignored.
+# ---------------------------------------------------------------------------
+data/raw/**
+!data/raw/**/
+!data/raw/**/.gitkeep
+
+data/processed/**
+!data/processed/**/
+!data/processed/.gitkeep
+
+data/synthetic/**
+!data/synthetic/**/
+!data/synthetic/.gitkeep
+
+# Audit reports can contain file names, sample annotations and transcriptions
+# taken from the raw datasets, so they are local-only as well.
+data/reports/**
+!data/reports/**/
+!data/reports/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Models, checkpoints, experiment outputs
+# ---------------------------------------------------------------------------
+models/**
+!models/**/
+!models/.gitkeep
+experiments/**
+!experiments/**/
+!experiments/.gitkeep
+checkpoints/
+runs/
+lightning_logs/
+wandb/
+mlruns/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.h5
+*.pkl
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# Secrets / environment
+# ---------------------------------------------------------------------------
+.env
+.env.*
+
+# ---------------------------------------------------------------------------
+# IDE / OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini

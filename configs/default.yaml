@@ -1,0 +1,42 @@
+# Default project configuration.
+# Paths are relative to the project root (the directory containing pyproject.toml).
+
+project:
+  name: indian-document-ocr
+
+paths:
+  raw: data/raw
+  processed: data/processed
+  synthetic: data/synthetic
+  reports: data/reports
+  models: models
+  experiments: experiments
+
+# Document types the system targets. Each has a folder under paths.raw.
+documents:
+  - aadhaar
+  - pan
+  - driving_license
+
+audit:
+  # File extensions treated as images. Everything else is inventoried as a
+  # "non-image" (potential label) file — no label format is assumed.
+  image_extensions: [.jpg, .jpeg, .png, .bmp, .tif, .tiff, .webp]
+  # Directory names reported as *candidate* split names (reporting only).
+  split_name_candidates: [train, training, val, valid, validation, dev, test, testing]
+  # Label previews in reports. Redaction keeps only small integers and
+  # decimals (class IDs / coordinates) and masks every other token, so
+  # identity text or ID numbers never reach a report. Set to 0 to disable.
+  sample_files_per_extension: 2
+  sample_max_lines: 5
+  sample_max_bytes: 1024
+  redact_previews: true
+  # "Unusual" image size thresholds.
+  min_image_side: 100
+  max_aspect_ratio: 3.0
+  # Max dHash Hamming distance for cross-split near-duplicate candidates.
+  near_duplicate_hamming: 4
+  # Max examples listed per finding (full issue list is always included).
+  max_examples: 25
+  # Hash all source files before/after the audit; fail if anything changed.
+  verify_integrity: true

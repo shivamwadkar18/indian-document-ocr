@@ -1,0 +1,25 @@
+# Configuration for source grouping, deduplication, and leakage-free dataset splitting.
+
+seed: 42
+
+split_ratios:
+  train: 0.70
+  valid: 0.15
+  test: 0.15
+
+similarity_thresholds:
+  # Hamming distance on 64-bit dHash for identifying ambiguous near-duplicate candidates
+  hamming_near_duplicate: 2
+
+datasets:
+  aadhaar:
+    raw_dir: "data/raw/aadhaar"
+    processed_dir: "data/processed/aadhaar"
+    manifest_path: "data/processed/manifests/aadhaar_source_groups.csv"
+  pan:
+    raw_dir: "data/raw/pan"
+    processed_dir: "data/processed/pan"
+    manifest_path: "data/processed/manifests/pan_source_groups.csv"
+
+reports:
+  leakage_report: "data/reports/leakage_report.md"

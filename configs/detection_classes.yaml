@@ -1,0 +1,60 @@
+# Unified Field Detector Class Vocabulary (Aadhaar + PAN)
+#
+# Common multi-document detector class IDs and mappings.
+# Note:
+# 1. Background is handled implicitly by the detector (unannotated image regions)
+#    and does NOT require an explicit class ID.
+# 2. Document type classification (Aadhaar vs PAN vs DL) is a separate pipeline stage
+#    and is NOT a detector class.
+# 3. Aadhaar Class 4 is unresolved annotation noise and is strictly excluded.
+
+classes:
+  0:
+    name: name
+    description: Full name of the document holder
+    applicable_documents:
+      - aadhaar
+      - pan
+      - driving_license
+  1:
+    name: date_of_birth
+    description: Date of birth (or year of birth)
+    applicable_documents:
+      - aadhaar
+      - pan
+      - driving_license
+  2:
+    name: gender
+    description: Gender indicator (e.g. MALE / FEMALE / TRANSGENDER)
+    applicable_documents:
+      - aadhaar
+  3:
+    name: aadhaar_number
+    description: 12-digit Aadhaar unique identification number (UID)
+    applicable_documents:
+      - aadhaar
+  4:
+    name: pan_number
+    description: 10-character alphanumeric Permanent Account Number
+    applicable_documents:
+      - pan
+  5:
+    name: fathers_name
+    description: Father's or parent's name
+    applicable_documents:
+      - pan
+      - driving_license
+
+# Direct mapping from raw source YOLO class IDs to unified detector class IDs
+source_to_detector_mapping:
+  aadhaar:
+    0: 3   # aadhaar_number -> detector class 3
+    1: 1   # date_of_birth  -> detector class 1
+    2: 2   # gender         -> detector class 2
+    3: 0   # name           -> detector class 0
+    4: null # Class 4 (noise) -> EXCLUDED
+  pan:
+    0: 1   # date_of_birth  -> detector class 1
+    1: 5   # fathers_name   -> detector class 5
+    2: 0   # name           -> detector class 0
+    3: 4   # pan_number     -> detector class 4

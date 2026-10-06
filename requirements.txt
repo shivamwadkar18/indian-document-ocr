@@ -1,0 +1,26 @@
+# Python 3.11
+#
+# Core runtime
+numpy>=1.26
+Pillow>=10.0
+PyYAML>=6.0
+opencv-python>=4.10
+tqdm>=4.66
+
+# Analysis / reporting
+pandas>=2.1
+matplotlib>=3.8
+scikit-learn>=1.4
+
+# Dev / tests
+pytest>=8.0
+
+# Field-detector training (needs PyTorch installed first — see below)
+ultralytics==8.4.173
+
+# PyTorch (NOT installed by this file)
+# The right wheel depends on your GPU / CUDA version. Install it separately
+# using the selector at https://pytorch.org/get-started/locally/ , e.g.
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# or for CPU only:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu

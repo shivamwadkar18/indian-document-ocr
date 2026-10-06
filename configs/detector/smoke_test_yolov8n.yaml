@@ -1,0 +1,23 @@
+# SMOKE TEST — proves the pipeline runs end to end. Not a baseline; its
+# metrics say nothing about detector quality.
+experiment_name: smoke_test_yolov8n
+dataset: data/processed/detector/data.yaml
+model: yolov8n.yaml        # YOLOv8n architecture, random init (no weight download)
+pretrained: false
+imgsz: 640
+batch: 8
+epochs: 1
+patience: 10
+workers: 2
+device: cpu
+optimizer: SGD
+lr0: 0.01
+seed: 42
+deterministic: true
+output_dir: experiments/runs
+fraction: 0.02
+plots: false               # plots render ID-document images; off for the smoke test
+offline: true              # no analytics, no downloads
+validate_dataset: true
+train_args:
+  fliplr: 0.0              # documents are direction-sensitive: no horizontal flips
