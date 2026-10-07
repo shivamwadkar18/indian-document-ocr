@@ -1,0 +1,39 @@
+# Initial OCR recognition dataset policy.
+# Synthetic-first because the detector dataset has no transcriptions.
+
+source_policy:
+  primary: synthetic
+  real_transcriptions: optional_future
+
+fields:
+  name:
+    allowed_class: latin_letters_and_spaces
+
+  fathers_name:
+    allowed_class: latin_letters_and_spaces
+
+  date_of_birth:
+    allowed_class: digits_slash_space
+
+  aadhaar_number:
+    allowed_class: digits_and_spaces
+
+  pan_number:
+    allowed_class: uppercase_latin_and_digits
+
+  gender:
+    allowed_class: latin_letters
+
+preprocessing:
+  target_height: 48
+  horizontal_padding: 8
+  vertical_padding: 4
+
+format:
+  annotation: jsonl
+  image_format: png
+
+splits:
+  train: 0.8
+  valid: 0.1
+  test: 0.1
