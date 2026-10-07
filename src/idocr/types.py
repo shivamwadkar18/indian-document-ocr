@@ -65,18 +65,23 @@ class BBox:
 
 @dataclass
 class TextRegion:
-    """Output of the text detector for one region."""
+    """Output of the field detector for one detected region."""
 
     bbox: BBox
     confidence: float
-    # TODO(after audit): whether detectors emit polygons depends on the source
-    # labels and the chosen detection architecture.
+    # Detector class identity. ``class_name`` is the canonical field name
+    # such as ``name`` or ``pan_number``.
+    class_id: int = -1
+    class_name: str | None = None
+    # Reserved for future polygon-capable detectors.
     polygon: list[tuple[float, float]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "bbox": self.bbox.to_list(),
             "confidence": self.confidence,
+            "class_id": self.class_id,
+            "class_name": self.class_name,
             "polygon": [list(p) for p in self.polygon] if self.polygon else None,
         }
 
