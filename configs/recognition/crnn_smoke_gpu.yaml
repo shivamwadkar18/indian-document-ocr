@@ -1,0 +1,20 @@
+# SHORT GPU SMOKE RUN (Colab T4). Checks the CUDA/AMP path and that the
+# loss and CER move in the right direction. Not a full training run.
+experiment_name: smoke_test_crnn_t4
+dataset_dir: data/processed/recognition
+output_dir: experiments/runs
+epochs: 3
+batch_size: 128
+lr: 0.001
+weight_decay: 0.0001
+grad_clip: 5.0
+num_workers: 2
+device: cuda
+amp: true
+seed: 42
+max_train_samples: 6000     # 1,000 records x 6 fields (balanced)
+max_valid_samples: null     # full valid split (3,000)
+hidden_size: 128
+lstm_layers: 2
+dropout: 0.1
+log_every: 10

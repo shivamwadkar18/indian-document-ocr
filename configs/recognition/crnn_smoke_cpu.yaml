@@ -1,0 +1,20 @@
+# CPU SMOKE TEST — proves dataset -> model -> CTC loss -> backward ->
+# checkpoint -> reload -> decode. Its metrics say nothing about OCR quality.
+experiment_name: smoke_test_crnn_cpu
+dataset_dir: data/processed/recognition
+output_dir: experiments/runs
+epochs: 1
+batch_size: 32
+lr: 0.001
+weight_decay: 0.0001
+grad_clip: 5.0
+num_workers: 0
+device: cpu
+amp: false
+seed: 42
+max_train_samples: 600      # first 100 records x 6 fields (balanced)
+max_valid_samples: 120
+hidden_size: 128
+lstm_layers: 2
+dropout: 0.1
+log_every: 5
