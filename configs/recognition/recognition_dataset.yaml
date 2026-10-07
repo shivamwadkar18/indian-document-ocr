@@ -5,24 +5,32 @@ source_policy:
   primary: synthetic
   real_transcriptions: optional_future
 
+# document_types: document(s) the field appears on. Fields shared by
+# several documents cycle through the list record by record.
 fields:
   name:
     allowed_class: latin_letters_and_spaces
+    document_types: [aadhaar, pan]
 
   fathers_name:
     allowed_class: latin_letters_and_spaces
+    document_types: [pan]
 
   date_of_birth:
     allowed_class: digits_slash_space
+    document_types: [aadhaar, pan]
 
   aadhaar_number:
     allowed_class: digits_and_spaces
+    document_types: [aadhaar]
 
   pan_number:
     allowed_class: uppercase_latin_and_digits
+    document_types: [pan]
 
   gender:
     allowed_class: latin_letters
+    document_types: [aadhaar]
 
 preprocessing:
   target_height: 48
@@ -37,3 +45,13 @@ splits:
   train: 0.8
   valid: 0.1
   test: 0.1
+
+# Full synthetic dataset generation (scripts/generate_recognition_dataset.py).
+# total_samples is split evenly across the fields, then by `splits`;
+# every per-field split count must be a whole number.
+generation:
+  seed: 42
+  total_samples: 30000
+  output_dir: data/processed/recognition
+  # null -> $IDOCR_OCR_FONT, then the generator's fallback font list.
+  font_path: null
