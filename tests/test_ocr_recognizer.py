@@ -14,6 +14,7 @@ from idocr.models.recognizer.crnn import (  # noqa: E402
     images_to_tensor,
     load_checkpoint,
     model_from_checkpoint,
+    postprocess_result,
     save_checkpoint,
 )
 from idocr.types import RecognitionResult  # noqa: E402
@@ -213,3 +214,43 @@ def test_recognizer_rejects_bad_input(tmp_path) -> None:
 def test_missing_checkpoint(tmp_path) -> None:
     with pytest.raises(FileNotFoundError):
         CRNNRecognizer.from_checkpoint(tmp_path / "nope.pt")
+
+
+# --- post-processing -------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("decoded", "expected"),
+    [
+        (" SANJAY SINGH ", "SANJAY SINGH"),
+        ("3878 5427 0209", "3878 5427 0209"),
+        ("31/10/1985", "31/10/1985"),
+        ("  RAM  KUMAR  SINGH ", "RAM  KUMAR  SINGH"),  # internal spaces kept as-is
+        (" / 31/10/1985 / ", "/ 31/10/1985 /"),
+    ],
+)
+def test_postprocess_strips_only_outer_whitespace(decoded: str, expected: str) -> None:
+    result = postprocess_result(decoded, 0.9)
+    assert result.text == expected
+    assert result.confidence == 0.9
+
+
+def test_postprocess_whitespace_only_is_empty() -> None:
+    assert postprocess_result("   ", 0.9) == RecognitionResult(text="", confidence=0.0)
+
+
+def test_recognize_and_batch_apply_postprocessing(tmp_path, monkeypatch) -> None:
+    import idocr.models.recognizer.crnn as crnn
+
+    decoded = [" SANJAY SINGH ", "3878 5427 0209", "31/10/1985 ", "  "]
+    monkeypatch.setattr(
+        crnn, "greedy_decode",
+        lambda log_probs, lengths, vocab: [(t, 0.8) for t in decoded[: log_probs.size(1)]],
+    )
+    recognizer = CRNNRecognizer.from_checkpoint(save_checkpoint(tmp_path / "m.pt", CRNN(), Vocabulary()))
+    crop = np.full((30, 200), 230, dtype=np.uint8)
+
+    assert recognizer.recognize(crop).text == "SANJAY SINGH"
+    batch = recognizer.recognize_batch([crop] * 4)
+    assert [r.text for r in batch] == ["SANJAY SINGH", "3878 5427 0209", "31/10/1985", ""]
+    assert [r.confidence for r in batch] == [0.8, 0.8, 0.8, 0.0]

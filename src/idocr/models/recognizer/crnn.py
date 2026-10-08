@@ -130,6 +130,16 @@ def greedy_decode(
     return out
 
 
+def postprocess_result(text: str, confidence: float) -> RecognitionResult:
+    """Strip leading/trailing whitespace; internal spaces and '/' are kept.
+
+    A read that is only whitespace becomes empty with confidence 0.0, like an
+    all-blank CTC path.
+    """
+    text = text.strip()
+    return RecognitionResult(text=text, confidence=confidence if text else 0.0)
+
+
 # ---------------------------------------------------------------------------
 # Checkpoints
 # ---------------------------------------------------------------------------
@@ -232,5 +242,5 @@ class CRNNRecognizer(TextRecognizer):
             batch, widths = images_to_tensor(images)
             log_probs = self.model(batch.to(self.device), widths.to(self.device))
             for text, confidence in greedy_decode(log_probs, CRNN.output_lengths(widths), self.vocab):
-                results.append(RecognitionResult(text=text, confidence=confidence))
+                results.append(postprocess_result(text, confidence))
         return results
