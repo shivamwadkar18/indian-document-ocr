@@ -23,10 +23,10 @@ from idocr.data.recognition.generator import (
 )
 
 FIELD_PATTERNS = {
-    "name": r"[A-Z]+( [A-Z]+)+",
-    "fathers_name": r"[A-Z]+( [A-Z]+)+",
+    "name": r"[A-Za-z]+( [A-Za-z]+)+",
+    "fathers_name": r"[A-Za-z]+( [A-Za-z]+)+",
     "date_of_birth": r"\d{2}/\d{2}/\d{4}",
-    "gender": r"MALE|FEMALE",
+    "gender": r"(?i:MALE|FEMALE)",
     "aadhaar_number": r"[2-9]\d{3} \d{4} \d{4}",
     "pan_number": r"[A-Z]{3}P[A-Z]\d{4}[A-Z]",
 }
@@ -197,3 +197,25 @@ def test_save_png_rejects_other_extensions(
 ) -> None:
     with pytest.raises(ValueError):
         save_png(generator.render("MALE"), tmp_path / "sample.jpg")
+
+
+def test_case_variation_generated() -> None:
+    rng = random.Random(42)
+    names = [generate_field_text("name", rng) for _ in range(100)]
+    genders = [generate_field_text("gender", rng) for _ in range(100)]
+
+    has_upper_name = any(n.isupper() for n in names)
+    has_mixed_or_lower_name = any(any(c.islower() for c in n) for n in names)
+    assert has_upper_name and has_mixed_or_lower_name
+
+    has_upper_gender = any(g.isupper() for g in genders)
+    has_mixed_or_lower_gender = any(any(c.islower() for c in g) for g in genders)
+    assert has_upper_gender and has_mixed_or_lower_gender
+
+
+def test_pan_remains_strictly_uppercase() -> None:
+    rng = random.Random(42)
+    for _ in range(200):
+        pan = generate_field_text("pan_number", rng)
+        assert pan.isupper()
+        assert re.fullmatch(r"[A-Z]{3}P[A-Z]\d{4}[A-Z]", pan)

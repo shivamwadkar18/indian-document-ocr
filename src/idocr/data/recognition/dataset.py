@@ -51,10 +51,10 @@ STAGING_DIRNAME = ".staging"
 MANAGED_ENTRIES: tuple[str, ...] = (*SPLITS, INFO_FILENAME)
 
 FIELD_TEXT_PATTERNS: dict[str, str] = {
-    "name": r"[A-Z]+( [A-Z]+)+",
-    "fathers_name": r"[A-Z]+( [A-Z]+)+",
+    "name": r"[A-Za-z]+( [A-Za-z]+)+",
+    "fathers_name": r"[A-Za-z]+( [A-Za-z]+)+",
     "date_of_birth": r"\d{2}/\d{2}/\d{4}",
-    "gender": r"MALE|FEMALE",
+    "gender": r"(?i:MALE|FEMALE)",
     "aadhaar_number": r"[2-9]\d{3} \d{4} \d{4}",
     "pan_number": r"[A-Z]{3}P[A-Z]\d{4}[A-Z]",
 }

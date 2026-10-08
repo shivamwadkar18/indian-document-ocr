@@ -176,3 +176,15 @@ def test_amp_requires_cuda(dataset_dir: Path, tmp_path: Path) -> None:
                             "output_dir": str(tmp_path), "device": "cpu", "amp": True})
     with pytest.raises(ValueError):
         train(cfg, root=ROOT)
+
+
+def test_train_with_augmentation(dataset_dir: Path, tmp_path: Path) -> None:
+    cfg = config_from_dict({
+        "experiment_name": "aug", "dataset_dir": str(dataset_dir), "output_dir": str(tmp_path),
+        "epochs": 2, "batch_size": 12, "device": "cpu", "hidden_size": 32, "lstm_layers": 1,
+        "max_train_samples": 24, "max_valid_samples": 6,
+        "augmentation": {"enabled": True},
+    })
+    record = train(cfg, root=ROOT)
+    assert record["status"] == "completed"
+    assert record["config"]["augmentation"] == {"enabled": True}

@@ -6,10 +6,11 @@ Configs live in ``configs/recognition/``. Unknown keys are rejected.
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Mapping
 
+from idocr.data.augmentation.ocr import OcrAugmentConfig
 from idocr.utils.config import load_config
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -41,6 +42,9 @@ class RecognizerTrainConfig:
     lstm_layers: int = 2
     dropout: float = 0.1
     log_every: int = 50
+    # Optional train-split augmentation (OcrAugmentConfig fields); {} or
+    # enabled: false keeps the clean synthetic baseline.
+    augmentation: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.dataset_dir = Path(self.dataset_dir)
@@ -68,6 +72,10 @@ class RecognizerTrainConfig:
             errors.append(f"dropout must be in [0, 1), got {self.dropout!r}")
         if not isinstance(self.device, str) or not re.fullmatch(r"auto|cpu|cuda(:\d+)?", self.device):
             errors.append(f"device must be 'auto', 'cpu' or 'cuda[:N]', got {self.device!r}")
+        try:
+            OcrAugmentConfig.from_mapping(self.augmentation)
+        except (TypeError, ValueError) as exc:
+            errors.append(f"augmentation: {exc}")
         if errors:
             raise RecognizerConfigError("; ".join(errors))
 
@@ -76,6 +84,10 @@ class RecognizerTrainConfig:
         d["dataset_dir"] = self.dataset_dir.as_posix()
         d["output_dir"] = self.output_dir.as_posix()
         return d
+
+    @property
+    def augment_config(self) -> OcrAugmentConfig:
+        return OcrAugmentConfig.from_mapping(self.augmentation)
 
     def run_dir(self, root: Path) -> Path:
         out = self.output_dir if self.output_dir.is_absolute() else root / self.output_dir

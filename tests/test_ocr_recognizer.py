@@ -19,7 +19,16 @@ from idocr.models.recognizer.crnn import (  # noqa: E402
 )
 from idocr.types import RecognitionResult  # noqa: E402
 
-FIELD_TEXTS = ["RAHUL JOSHI", "SURESH PANDEY", "16/09/1973", "FEMALE", "7686 9458 2719", "ABCPJ1234F"]
+FIELD_TEXTS = [
+    "RAHUL JOSHI",
+    "Rahul Joshi",
+    "Suresh Pandey",
+    "16/09/1973",
+    "Female",
+    "FEMALE",
+    "7686 9458 2719",
+    "ABCPJ1234F",
+]
 
 
 # --- vocabulary ------------------------------------------------------------
@@ -28,8 +37,8 @@ FIELD_TEXTS = ["RAHUL JOSHI", "SURESH PANDEY", "16/09/1973", "FEMALE", "7686 945
 def test_alphabet_and_blank() -> None:
     vocab = Vocabulary()
     assert vocab.alphabet == DEFAULT_ALPHABET
-    assert set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/ ") == set(vocab.alphabet)
-    assert vocab.num_classes == 39
+    assert set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/ ") == set(vocab.alphabet)
+    assert vocab.num_classes == 65
     assert BLANK_INDEX == 0
     assert BLANK_INDEX not in vocab.encode(DEFAULT_ALPHABET)
 
@@ -42,10 +51,13 @@ def test_encode_decode_roundtrip(text: str) -> None:
 
 def test_encode_rejects_unknown_and_empty() -> None:
     vocab = Vocabulary()
-    with pytest.raises(ValueError):
-        vocab.encode("rahul")
+    # Lowercase and mixed-case are valid in expanded vocabulary.
+    assert len(vocab.encode("rahul")) == 5
+    assert len(vocab.encode("Rahul Joshi")) == 11
     with pytest.raises(ValueError):
         vocab.encode("A-B")
+    with pytest.raises(ValueError):
+        vocab.encode("user@id")
     with pytest.raises(ValueError):
         vocab.encode("")
 
@@ -90,7 +102,7 @@ def test_forward_shapes() -> None:
     batch, widths = images_to_tensor([_line(160), _line(400)])
     out = model(batch, widths)
 
-    assert out.shape == (105, 2, 39)  # (400 + 20 margin) // 4 frames; valid: 400 // 4
+    assert out.shape == (105, 2, 65)  # (400 + 20 margin) // 4 frames; valid: 400 // 4
     assert out.dtype == torch.float32
     assert torch.allclose(out.exp().sum(-1), torch.ones(105, 2), atol=1e-4)
     assert CRNN.output_lengths(widths).tolist() == [40, 100]

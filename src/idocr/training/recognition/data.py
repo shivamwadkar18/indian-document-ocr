@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
+import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
@@ -43,13 +44,22 @@ class RecognitionDataset(Dataset):
         *,
         image_height: int,
         limit: int | None = None,
+        augment: Callable[[Image.Image, np.random.Generator], Image.Image] | None = None,
+        seed: int = 0,
     ) -> None:
         self.split_dir = Path(split_dir)
         self.vocab = vocab
         self.image_height = image_height
+        self.augment = augment
+        self.seed = seed
+        self.epoch = 0
         self.samples = read_split(self.split_dir, limit)
         # Fail fast on characters the vocabulary cannot represent.
         self.targets = [vocab.encode(s.text) for s in self.samples]
+
+    def set_epoch(self, epoch: int) -> None:
+        """Change the augmentation draw; same (seed, epoch, index) -> same image."""
+        self.epoch = epoch
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -62,6 +72,8 @@ class RecognitionDataset(Dataset):
             raise ValueError(
                 f"{sample.image_path}: height {image.height} != {self.image_height}"
             )
+        if self.augment is not None:
+            image = self.augment(image, np.random.default_rng([self.seed, self.epoch, index]))
         return image, self.targets[index], sample
 
 

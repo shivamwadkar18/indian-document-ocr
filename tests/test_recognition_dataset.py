@@ -158,7 +158,7 @@ def test_pan_structure_and_surname(dataset_dir: Path) -> None:
                 continue
             assert re.fullmatch(PAN_PATTERN, r["text"])
             surname = names[r["image_path"].split("_")[0]].split()[-1]
-            assert r["text"][4] == surname[0]
+            assert r["text"][4] == surname[0].upper()
 
 
 def test_document_types(dataset_dir: Path, small_config) -> None:

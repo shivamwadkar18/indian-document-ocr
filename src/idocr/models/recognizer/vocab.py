@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Iterable, Sequence
 
-DEFAULT_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/ "
+DEFAULT_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/ "
 BLANK_INDEX = 0
 
 

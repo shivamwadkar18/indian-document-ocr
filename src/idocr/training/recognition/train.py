@@ -30,6 +30,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
+from idocr.data.augmentation.ocr import OcrLineAugmenter
 from idocr.data.recognition.dataset import INFO_FILENAME
 from idocr.evaluation.recognition import character_error_rate, exact_match_accuracy
 from idocr.models.recognizer.crnn import (
@@ -84,16 +85,22 @@ def build_loaders(
     image_height: int,
     generator: torch.Generator,
     pin_memory: bool = False,
+    preprocessing: Mapping[str, int] | None = None,
 ) -> tuple[DataLoader, DataLoader]:
+    aug_cfg = cfg.augment_config
+    augment = OcrLineAugmenter(aug_cfg, **(preprocessing or {})) if aug_cfg.enabled else None
     train_ds = RecognitionDataset(dataset_dir / "train", vocab, image_height=image_height,
-                                  limit=cfg.max_train_samples)
+                                  limit=cfg.max_train_samples, augment=augment, seed=cfg.seed)
     valid_ds = RecognitionDataset(dataset_dir / "valid", vocab, image_height=image_height,
                                   limit=cfg.max_valid_samples)
     common = dict(batch_size=cfg.batch_size, num_workers=cfg.num_workers, collate_fn=collate_batch,
                   worker_init_fn=_seed_worker, pin_memory=pin_memory,
                   persistent_workers=cfg.num_workers > 0)
+    # Workers must be re-created each epoch to see train_ds.set_epoch().
+    train_persistent = cfg.num_workers > 0 and augment is None
     return (
-        DataLoader(train_ds, shuffle=True, generator=generator, **common),
+        DataLoader(train_ds, shuffle=True, generator=generator,
+                   **{**common, "persistent_workers": train_persistent}),
         DataLoader(valid_ds, shuffle=False, **common),
     )
 
@@ -207,7 +214,8 @@ def train(config: RecognizerTrainConfig | Mapping[str, Any], root: str | Path | 
     generator = seed_everything(cfg.seed)
     vocab = Vocabulary()
     train_loader, valid_loader = build_loaders(cfg, dataset_dir, vocab, image_height, generator,
-                                               pin_memory=device.type == "cuda")
+                                               pin_memory=device.type == "cuda",
+                                               preprocessing=preprocessing)
 
     model = CRNN(CRNNConfig(num_classes=vocab.num_classes, image_height=image_height,
                             hidden_size=cfg.hidden_size, lstm_layers=cfg.lstm_layers,
@@ -239,6 +247,7 @@ def train(config: RecognizerTrainConfig | Mapping[str, Any], root: str | Path | 
     try:
         for epoch in range(1, cfg.epochs + 1):
             started = time.perf_counter()
+            train_loader.dataset.set_epoch(epoch)
             train_loss = train_one_epoch(model, train_loader, optimizer, scaler, device, cfg, epoch,
                                          scheduler)
             val = evaluate(model, valid_loader, vocab, device, cfg.amp)

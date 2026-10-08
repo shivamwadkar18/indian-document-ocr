@@ -112,6 +112,21 @@ def resolve_font_path(font_path: str | os.PathLike[str] | None = None) -> Path:
 # ---------------------------------------------------------------------------
 
 
+def _apply_case_variation(text: str, rng: random.Random) -> str:
+    """Apply realistic case variation (uppercase, title-case, lowercase, or mixed-case)."""
+    case_style = rng.choice(("upper", "title", "lower", "mixed"))
+    if case_style == "upper":
+        return text.upper()
+    if case_style == "title":
+        return text.title()
+    if case_style == "lower":
+        return text.lower()
+    return "".join(
+        c.upper() if rng.random() < 0.5 else c.lower() if c.isalpha() else c
+        for c in text
+    )
+
+
 def _person_name(rng: random.Random, first_names: tuple[str, ...]) -> str:
     return f"{rng.choice(first_names)} {rng.choice(_SURNAMES)}"
 
@@ -142,18 +157,18 @@ def generate_field_text(field_name: str, rng: random.Random) -> str:
     """Sample one transcription in the validated format for ``field_name``.
 
     Formats:
-        name, fathers_name: uppercase Latin letters and spaces
+        name, fathers_name: Latin letters (uppercase/title-case/mixed-case) and spaces
         date_of_birth: DD/MM/YYYY
-        gender: MALE or FEMALE
+        gender: MALE or FEMALE (uppercase/title-case/mixed-case)
         aadhaar_number: XXXX XXXX XXXX (first digit 2-9)
-        pan_number: AAAP + surname initial + 4 digits + 1 letter (individual)
+        pan_number: AAAP + surname initial + 4 digits + 1 letter (individual, uppercase)
     """
     if field_name == "name":
         first_names = rng.choice((_MALE_FIRST_NAMES, _FEMALE_FIRST_NAMES))
-        return _person_name(rng, first_names)
+        return _apply_case_variation(_person_name(rng, first_names), rng)
 
     if field_name == "fathers_name":
-        return _person_name(rng, _MALE_FIRST_NAMES)
+        return _apply_case_variation(_person_name(rng, _MALE_FIRST_NAMES), rng)
 
     if field_name == "date_of_birth":
         span = (_DOB_END - _DOB_START).days
@@ -161,7 +176,8 @@ def generate_field_text(field_name: str, rng: random.Random) -> str:
         return dob.strftime("%d/%m/%Y")
 
     if field_name == "gender":
-        return rng.choice(("MALE", "FEMALE"))
+        gender = rng.choice(("MALE", "FEMALE"))
+        return _apply_case_variation(gender, rng)
 
     if field_name == "aadhaar_number":
         digits = str(rng.randint(2, 9)) + "".join(
