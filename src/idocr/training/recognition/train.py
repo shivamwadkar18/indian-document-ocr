@@ -179,9 +179,12 @@ def train_one_epoch(model: CRNN, loader: DataLoader, optimizer: torch.optim.Opti
         if cfg.grad_clip:
             scaler.unscale_(optimizer)
             nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+        scale_before = scaler.get_scale()
         scaler.step(optimizer)
         scaler.update()
-        if scheduler is not None:
+        scale_after = scaler.get_scale()
+        # Advance scheduler only when optimizer.step() was actually executed
+        if scheduler is not None and scale_before <= scale_after:
             scheduler.step()
         total += loss.item() * len(batch["texts"])
         n += len(batch["texts"])

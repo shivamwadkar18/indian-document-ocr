@@ -1,0 +1,20 @@
+# Overfit diagnostic config — memorizes a 32-sample subset to prove
+# loss convergence, CTC alignment, and non-empty decoding.
+experiment_name: diagnostic_overfit_32
+dataset_dir: data/processed/recognition
+output_dir: experiments/runs
+epochs: 100
+batch_size: 16
+lr: 0.003
+weight_decay: 0.0
+grad_clip: 5.0
+num_workers: 0
+device: cpu
+amp: false
+seed: 42
+max_train_samples: 32
+max_valid_samples: 32
+hidden_size: 128
+lstm_layers: 2
+dropout: 0.0
+log_every: 20

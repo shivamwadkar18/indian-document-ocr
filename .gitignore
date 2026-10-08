@@ -76,3 +76,4 @@ htmlcov/
 .DS_Store
 Thumbs.db
 desktop.ini
+recognition_dataset.zip
