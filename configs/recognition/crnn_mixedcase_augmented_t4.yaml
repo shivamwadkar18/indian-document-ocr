@@ -1,0 +1,22 @@
+# Dedicated T4 GPU training configuration for the mixed-case CRNN recognizer.
+# 10 epochs on the full 24k train split with OCR augmentation enabled.
+experiment_name: crnn_mixedcase_augmented_t4_10ep
+dataset_dir: data/processed/recognition
+output_dir: experiments/runs
+epochs: 10
+batch_size: 128
+lr: 0.001
+weight_decay: 0.0001
+grad_clip: 5.0
+num_workers: 2
+device: cuda
+amp: true
+seed: 42
+max_train_samples: null     # full 24,000 train samples
+max_valid_samples: null     # full 3,000 valid samples
+hidden_size: 128
+lstm_layers: 2
+dropout: 0.1
+log_every: 10
+augmentation:
+  enabled: true

@@ -47,10 +47,53 @@ def dataset_dir(tmp_path_factory) -> Path:
 # --- config ----------------------------------------------------------------
 
 
-@pytest.mark.parametrize("name", ["crnn_smoke_cpu.yaml", "crnn_smoke_gpu.yaml"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "crnn_smoke_cpu.yaml",
+        "crnn_smoke_gpu.yaml",
+        "crnn_overfit_32.yaml",
+        "crnn_mixedcase_augmented_t4.yaml",
+    ],
+)
 def test_shipped_configs_load(name: str) -> None:
     cfg = load_recognizer_config(ROOT / "configs" / "recognition" / name)
     assert cfg.dataset_dir == Path("data/processed/recognition")
+
+
+def test_crnn_mixedcase_augmented_t4_config(dataset_dir: Path) -> None:
+    from idocr.training.recognition.train import build_loaders
+
+    cfg = load_recognizer_config(ROOT / "configs" / "recognition" / "crnn_mixedcase_augmented_t4.yaml")
+    assert cfg.experiment_name == "crnn_mixedcase_augmented_t4_10ep"
+    assert cfg.dataset_dir == Path("data/processed/recognition")
+    assert cfg.output_dir == Path("experiments/runs")
+    assert cfg.epochs == 10
+    assert cfg.batch_size == 128
+    assert cfg.lr == 0.001
+    assert cfg.weight_decay == 0.0001
+    assert cfg.grad_clip == 5.0
+    assert cfg.num_workers == 2
+    assert cfg.device == "cuda"
+    assert cfg.amp is True
+    assert cfg.seed == 42
+    assert cfg.max_train_samples is None
+    assert cfg.max_valid_samples is None
+    assert cfg.hidden_size == 128
+    assert cfg.lstm_layers == 2
+    assert cfg.dropout == 0.1
+    assert cfg.log_every == 10
+    assert cfg.augment_config.enabled is True
+
+    # Test build_loaders setup: training is augmented, validation is not.
+    vocab = Vocabulary()
+    gen = torch.Generator().manual_seed(42)
+    # Use CPU override for loader construction in test environment
+    cpu_cfg = dataclasses.replace(cfg, device="cpu", num_workers=0)
+    train_loader, valid_loader = build_loaders(cpu_cfg, dataset_dir, vocab, image_height=56, generator=gen)
+
+    assert train_loader.dataset.augment is not None
+    assert valid_loader.dataset.augment is None
 
 
 def test_config_validation() -> None:
