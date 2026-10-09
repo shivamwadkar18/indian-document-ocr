@@ -56,51 +56,144 @@ FALLBACK_FONT_PATHS: tuple[str, ...] = (
     "C:/Windows/Fonts/arial.ttf",
 )
 
+import hashlib
+
 _UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 _DIGITS = "0123456789"
 
+MALE_FIRST_NAMES: tuple[str, ...] = (
+    "AAKASH", "AARAV", "ABDUL", "ABHINAV", "ABHISHEK", "ACHYUT", "ADITYA", "AJAY", "AJIT", "AKASH",
+    "AKHIL", "ALOK", "AMAN", "AMAR", "AMIT", "ANAND", "ANIL", "ANKIT", "ANMOL", "ANURAG",
+    "ARIF", "ARJUN", "ARUN", "ARVIND", "ASHISH", "ASHOK", "ASHWIN", "AVINASH", "AYUSH", "BALRAM",
+    "BHARAT", "BHASKAR", "BHAVIN", "BHUVAN", "BIKRAM", "BIMAL", "CHANDAN", "CHETAN", "CHIRAG", "DARSHAN",
+    "DEEPAK", "DEV", "DEVENDRA", "DHANANJAY", "DHARAM", "DHARMENDRA", "DHIRAJ", "DILIP", "DINESH", "DIVYESH",
+    "ESHWAR", "FAISAL", "FARHAN", "GANESH", "GAURAV", "GAUTAM", "GIRISH", "GOPAL", "GOVIND", "GULSHAN",
+    "GURPREET", "HARIKRISHNAN", "HARISH", "HARPREET", "HARSH", "HEMANT", "HITESH", "INDRAJIT", "IQBAL", "ISHAN",
+    "JAGDISH", "JAIDEEP", "JASWANT", "JATIN", "JAYANT", "JITENDRA", "KAMAL", "KAPIL", "KARAN", "KARTIK",
+    "KESHAV", "KIRAN", "KISHORE", "KULDEEP", "KUNAL", "LAKSHMAN", "LALIT", "LOKESH", "MADHAV", "MAHESH",
+    "MANISH", "MANOJ", "MAYANK", "MOHAMMED", "MOHAN", "MOHIT", "MUKESH", "NARESH", "NAVEEN", "NEERAJ",
+    "NIKHIL", "NITESH", "NITIN", "OM", "OMKAR", "PANKAJ", "PARAS", "PARTH", "PAVAN", "PRABHAT",
+    "PRADEEP", "PRAKASH", "PRANAV", "PRASHANT", "PRATEEK", "PRAVEEN", "PUNIT", "PURUSHOTHAMAN", "RAGHAV", "RAHUL",
+    "RAJ", "RAJAT", "RAJEEV", "RAJENDRA", "RAJESH", "RAKESH", "RAM", "RAMAN", "RAMESH", "RANJEET",
+    "RAVI", "RAVINDRA", "RISHABH", "RITESH", "ROHAN", "ROHIT", "SACHIN", "SAGAR", "SAMIR", "SANDEEP",
+    "SANJAY", "SANJEEV", "SANTOSH", "SARVESH", "SATISH", "SAURABH", "SHAILESH", "SHASHANK", "SHEKHAR", "SHIV",
+    "SHUBHAM", "SIDDHARTH", "SOHAN", "SOURAV", "SUBHASH", "SUDHIR", "SUJIT", "SUMIT", "SUNDAR", "SUNIL",
+    "SURAJ", "SURENDRA", "SURESH", "TARUN", "TEJAS", "TUSHAR", "UDAY", "UMESH", "UTKARSH", "VARUN",
+    "VED", "VIJAY", "VIKAS", "VIKRAM", "VIMAL", "VINAY", "VINOD", "VIPIN", "VIPUL", "VISHAL",
+    "VISHNU", "VIVEK", "YASH", "YOGESH", "ZAFAR",
+)
+
+FEMALE_FIRST_NAMES: tuple[str, ...] = (
+    "AANCHAL", "AARUSHI", "AARTI", "AASHNA", "AAYUSHI", "ABHA", "ADITI", "AISHWARYA", "AKANKSHA", "AKSHITA",
+    "ALKA", "AMITA", "AMRITA", "ANANYA", "ANITA", "ANJALI", "ANJU", "ANKITA", "ANNAPURNA", "ANSHIKA",
+    "ANUPAMA", "ANURADHA", "ANUSHA", "ANUSHKA", "APARNA", "ARCHANA", "ARUNA", "ASHA", "ASHWINI", "AVANI",
+    "BARKHA", "BHAGYASHREE", "BHARTI", "BHAVANA", "BHAVNA", "BHAWNA", "BHUMIKA", "BINDUSHA", "CHAITALI", "CHANDANA",
+    "CHANDANI", "CHHAVI", "CHITRA", "DAMINI", "DARSHANA", "DEEPA", "DEEPIKA", "DEEPTI", "DEVASREE", "DIVYA",
+    "DRISHTI", "EKTA", "ESHA", "FALGUNI", "FARIDA", "FATIMA", "GARIMA", "GAYATRI", "GEETA", "GEETANJALI",
+    "GITA", "GUNJAN", "HARINI", "HARPREET", "HARSHA", "HEMA", "HIMANI", "INDU", "INDIRA", "ISHA",
+    "ISHITA", "JAYA", "JAYASHREE", "JYOTI", "KAJAL", "KALPANA", "KALYANI", "KAMINI", "KANCHAN", "KARISHMA",
+    "KAVITA", "KHUSHBOO", "KIRAN", "KIRTI", "KOMAL", "KRITIKA", "KUSUM", "LAKSHMI", "LALITA", "LATA",
+    "LAVANYA", "LEELA", "MADHURI", "MAHIMA", "MAMTA", "MANISHA", "MANJU", "MANPREET", "MAYA", "MEENA",
+    "MEENAKSHI", "MEERA", "MEGHA", "MONIKA", "MRIDULA", "MUKTA", "NAINA", "NANDINI", "NEELAM", "NEELIMA",
+    "NEHA", "NIDHI", "NIKITA", "NISHA", "NITA", "NUPUR", "PADMA", "PADMAVATHI", "PALLAVI", "PARUL",
+    "PAYAL", "POOJA", "POONAM", "PRACHI", "PRAGATI", "PRANITA", "PRATIBHA", "PRATIMA", "PREETI", "PRERNA",
+    "PRIYA", "PRIYANKA", "PUSHPA", "RACHANA", "RADHA", "RADHIKA", "RAJNI", "RAKHI", "RASHMI", "REENA",
+    "REKHA", "RENUKA", "RICHA", "RINKU", "RITA", "RITU", "RIYA", "ROHINI", "ROOPA", "RUCHI",
+    "RUCHIKA", "RUPA", "RUPALI", "SAKSHI", "SANDHYA", "SANGEETA", "SANJANA", "SAPNA", "SARITA", "SAROJ",
+    "SAROJINI", "SEEMA", "SHALINI", "SHASHI", "SHEELA", "SHIKHA", "SHILPA", "SHIVANI", "SHOBHA", "SHREEYA",
+    "SHREYA", "SHRUTI", "SHWETA", "SIMRAN", "SMRITI", "SNEHA", "SNEHAL", "SONAL", "SONAM", "SONIA",
+    "SUCHITRA", "SUDHA", "SUJATA", "SULOCHANA", "SUMAN", "SUMITRA", "SUNITA", "SUPRIYA", "SURABHI", "SUREKHA",
+    "SUSHILA", "SUSHMA", "SWATI", "SWETA", "TANISHA", "TANUJA", "TANVI", "TANYA", "TARUNA", "TRIPTI",
+    "TRISHA", "TULSI", "UMA", "URMILA", "URVASHI", "USHA", "VAISHALI", "VANDANA", "VARSHA", "VEENA",
+    "VIDYA", "VINITA", "YAMINI", "YASHODA", "YOGITA", "ZOYA",
+)
+
+SURNAMES: tuple[str, ...] = (
+    "ACHARYA", "ADHIKARI", "AGARWAL", "AGNIHOTRI", "AHUJA", "AMBEDKAR", "ANAND", "APTE", "BAGCHI", "BAJAJ",
+    "BAKSHI", "BALAKRISHNAN", "BANDYOPADHYAY", "BANERJEE", "BANSAL", "BARMAN", "BASU", "BATRA", "BHADURI", "BHAGAT",
+    "BHALLA", "BHARDWAJ", "BHARGAVA", "BHAT", "BHATIA", "BHATTACHARYA", "BHOSALE", "BISWAS", "BORA", "BORKAR",
+    "BOSE", "CHADHA", "CHAKRABORTY", "CHANDRA", "CHATTERJEE", "CHATTOPADHYAY", "CHAUHAN", "CHAVAN", "CHAWLA", "CHOPRA",
+    "CHOUDHARY", "CHOWDHURY", "DALAL", "DAMODARAN", "DAS", "DASGUPTA", "DATTA", "DAVE", "DEOKAR", "DESAI",
+    "DESHMUKH", "DESHPANDE", "DEWAN", "DHAR", "DHILLON", "DIXIT", "DODDA", "DUBEY", "DUTTA", "FERNANDES",
+    "GADE", "GAIKWAD", "GANDHI", "GANGULY", "GARG", "GHATAK", "GHOSH", "GILL", "GOGOI", "GOKHALE",
+    "GOSWAMI", "GOVINDARAJAN", "GROVER", "GUHA", "GULATI", "GUPTA", "HALDER", "HANDA", "HARIDAS", "HEGDE",
+    "HOODA", "IYENGAR", "IYER", "JADHAV", "JAIN", "JAISWAL", "JAYARAMAN", "JHA", "JINDAL", "JOGLEKAR",
+    "JOSHI", "KAKKAR", "KALITA", "KAMATH", "KAPOOR", "KAPUR", "KAR", "KASHYAP", "KAUL", "KAUR",
+    "KHAN", "KHANNA", "KHATRI", "KHURANA", "KOHLI", "KOTIAN", "KRISHNAN", "KULKARNI", "KUMAR", "KUMARI",
+    "LAHOTI", "LAL", "LELE", "LODHA", "MADHAVAN", "MAHAJAN", "MAITI", "MAJUMDAR", "MALHOTRA", "MALIK",
+    "MALLICK", "MANDAL", "MANI", "MANOHAR", "MARATHE", "MATHUR", "MAZUMDAR", "MEDHI", "MEHRA", "MEHTA",
+    "MENON", "MISHRA", "MITRA", "MITTAL", "MOHANTY", "MUKHERJEE", "MUKHOPADHYAY", "MURTHY", "NADAR", "NAIDU",
+    "NAIK", "NAIR", "NAMBIAR", "NANDA", "NARAYAN", "NARAYANAN", "NATARAJAN", "NATH", "NAYAK", "NEGI",
+    "NIGAM", "OBEROI", "OJHA", "PAI", "PAL", "PANDEY", "PANDIT", "PANICKER", "PANT", "PARIKH",
+    "PARMAR", "PASWAN", "PATEL", "PATHAK", "PATIL", "PATNAIK", "PAUL", "PILLAI", "POOJARY", "PRABHU",
+    "PRADHAN", "PRASAD", "PUJARI", "PURI", "QURESHI", "RADHAKRISHNAN", "RAGHAVAN", "RAI", "RAINA", "RAJAGOPAL",
+    "RAJAN", "RAJPUT", "RAMACHANDRAN", "RAMAKRISHNAN", "RAMAN", "RAMASWAMY", "RAMESH", "RANA", "RANDHAWA", "RANGANATHAN",
+    "RAO", "RASTOGI", "RATHORE", "RAUT", "RAWAT", "RAY", "REDDY", "ROY", "SACHDEV", "SAHA",
+    "SAHAY", "SAHNI", "SAHOO", "SAINI", "SAMANT", "SANDHU", "SANE", "SANGHVI", "SANYAL", "SARAF",
+    "SARAN", "SARASWAT", "SARKAR", "SARMA", "SAXENA", "SEHGAL", "SEN", "SENGUPTA", "SETH", "SETHI",
+    "SHAH", "SHARMA", "SHENOY", "SHETTY", "SHINDE", "SHRIVASTAVA", "SHUKLA", "SINGH", "SINGHAL", "SINGHANIA",
+    "SINHA", "SODHI", "SOLANKI", "SOMANI", "SONI", "SRIDHAR", "SRINIVAS", "SRINIVASAN", "SRIVASTAVA", "SUBRAMANIAN",
+    "SUNDARAM", "SURI", "SURVE", "SWAMINATHAN", "TALWAR", "TAMBE", "TANDON", "TELANG", "THACKER", "THAKUR",
+    "THOMAS", "THOMSON", "THOTA", "TIWARI", "TRIPATHI", "TRIVEDI", "UPADHYAY", "UPPAL", "VAIDYA", "VAISH",
+    "VARGHESE", "VARMA", "VARSHNEY", "VASUDEVAN", "VENKATACHALAM", "VENKATARAMAN", "VENKATESH", "VENUGOPAL", "VERMA",
+    "VIJAY", "VIRANI", "VOHRA", "VYAS", "WADEKAR", "WADHWA", "WARRIER", "XAVIER", "YADAV", "ZACHARIA", "ZAIDI",
+)
+
+_MALE_FIRST_NAMES = MALE_FIRST_NAMES
+_FEMALE_FIRST_NAMES = FEMALE_FIRST_NAMES
+_SURNAMES = SURNAMES
+
+
+def full_name_split(first_name: str, surname: str) -> str:
+    """Deterministically partition complete name combinations across splits."""
+    key = f"{first_name.strip().upper()} {surname.strip().upper()}".encode("utf-8")
+    h = int(hashlib.sha256(key).hexdigest()[:8], 16) % 1000
+    if h < 800:
+        return "train"
+    elif h < 900:
+        return "valid"
+    else:
+        return "test"
+
+
+SPLIT_MALE_NAME_COMBINATIONS: dict[str, tuple[tuple[str, str], ...]] = {
+    s: tuple(
+        (f, sur)
+        for f in MALE_FIRST_NAMES
+        for sur in SURNAMES
+        if full_name_split(f, sur) == s
+    )
+    for s in ("train", "valid", "test")
+}
+
+SPLIT_FEMALE_NAME_COMBINATIONS: dict[str, tuple[tuple[str, str], ...]] = {
+    s: tuple(
+        (f, sur)
+        for f in FEMALE_FIRST_NAMES
+        for sur in SURNAMES
+        if full_name_split(f, sur) == s
+    )
+    for s in ("train", "valid", "test")
+}
+
+SPLIT_NAME_COMBINATIONS: dict[str, tuple[tuple[str, str], ...]] = {
+    s: SPLIT_MALE_NAME_COMBINATIONS[s] + SPLIT_FEMALE_NAME_COMBINATIONS[s]
+    for s in ("train", "valid", "test")
+}
+
+# Backward compatibility alias for single-component queries
 SPLIT_MALE_FIRST_NAMES: dict[str, tuple[str, ...]] = {
-    "train": (
-        "RAHUL", "AMIT", "SURESH", "RAJESH", "VIKRAM", "ANIL", "SANJAY", "ARJUN",
-        "KARAN", "ROHIT", "MANOJ", "DEEPAK", "VIJAY", "ASHOK", "RAVI", "NITIN",
-    ),
-    "valid": (
-        "SUNIL", "PRAKASH", "MOHAN", "RAMESH",
-    ),
-    "test": (
-        "ADITYA", "HARISH", "GOPAL", "KIRAN",
-    ),
+    s: tuple(sorted({f for f, _ in SPLIT_MALE_NAME_COMBINATIONS[s]}))
+    for s in ("train", "valid", "test")
 }
-
 SPLIT_FEMALE_FIRST_NAMES: dict[str, tuple[str, ...]] = {
-    "train": (
-        "POOJA", "PRIYA", "NEHA", "ANJALI", "SUNITA", "KAVITA", "DIVYA", "MEERA",
-        "REKHA", "ANITA", "SNEHA", "SWATI", "LAKSHMI", "GEETA", "NISHA", "RITU",
-    ),
-    "valid": (
-        "SHALINI", "ASHA", "SEEMA", "PREETI",
-    ),
-    "test": (
-        "ANUSHKA", "DEEPA", "KOMAL", "USHA",
-    ),
+    s: tuple(sorted({f for f, _ in SPLIT_FEMALE_NAME_COMBINATIONS[s]}))
+    for s in ("train", "valid", "test")
 }
-
 SPLIT_SURNAMES: dict[str, tuple[str, ...]] = {
-    "train": (
-        "JOSHI", "PATEL", "SHARMA", "VERMA", "GUPTA", "SINGH", "KUMAR", "REDDY",
-        "NAIR", "IYER", "MEHTA", "SHAH", "DESAI", "KULKARNI", "PATIL", "JADHAV",
-    ),
-    "valid": (
-        "YADAV", "MISHRA", "PANDEY", "CHAUHAN",
-    ),
-    "test": (
-        "RAO", "PILLAI", "BOSE", "DAS",
-    ),
+    s: tuple(sorted({sur for _, sur in SPLIT_NAME_COMBINATIONS[s]}))
+    for s in ("train", "valid", "test")
 }
-
-_MALE_FIRST_NAMES = tuple(n for names in SPLIT_MALE_FIRST_NAMES.values() for n in names)
-_FEMALE_FIRST_NAMES = tuple(n for names in SPLIT_FEMALE_FIRST_NAMES.values() for n in names)
-_SURNAMES = tuple(n for names in SPLIT_SURNAMES.values() for n in names)
 
 _DOB_START = date(1950, 1, 1)
 _DOB_END = date(2007, 12, 31)
@@ -156,10 +249,15 @@ def _apply_case_variation(text: str, rng: random.Random) -> str:
 
 def _person_name(
     rng: random.Random,
-    first_names: tuple[str, ...],
-    surnames: tuple[str, ...],
+    first_names: tuple[str, ...] | None = None,
+    surnames: tuple[str, ...] | None = None,
+    split: str = "train",
 ) -> str:
-    return f"{rng.choice(first_names)} {rng.choice(surnames)}"
+    if first_names is not None and surnames is not None:
+        return f"{rng.choice(first_names)} {rng.choice(surnames)}"
+    combinations = SPLIT_NAME_COMBINATIONS.get(split, SPLIT_NAME_COMBINATIONS["train"])
+    first, sur = rng.choice(combinations)
+    return f"{first} {sur}"
 
 
 def generate_pan_number(
@@ -171,11 +269,10 @@ def generate_pan_number(
 
     Structure: 3 random letters, ``P`` (individual holder), the surname's
     initial, 4 random digits, 1 random letter. When ``surname`` is not
-    given, one is drawn from the synthetic surname list for ``split``.
+    given, one is drawn from the synthetic surname list.
     """
     if surname is None:
-        surname_pool = SPLIT_SURNAMES.get(split, _SURNAMES)
-        surname = rng.choice(surname_pool)
+        surname = rng.choice(_SURNAMES)
     initial = surname.strip()[:1].upper()
     if not initial or initial not in _UPPERCASE:
         raise ValueError(f"surname must start with a Latin letter: {surname!r}")
@@ -204,16 +301,14 @@ def generate_field_text(
         pan_number: AAAP + surname initial + 4 digits + 1 letter (individual, uppercase)
     """
     if field_name == "name":
-        males = SPLIT_MALE_FIRST_NAMES.get(split, _MALE_FIRST_NAMES)
-        females = SPLIT_FEMALE_FIRST_NAMES.get(split, _FEMALE_FIRST_NAMES)
-        surnames = SPLIT_SURNAMES.get(split, _SURNAMES)
-        first_names = rng.choice((males, females))
-        return _apply_case_variation(_person_name(rng, first_names, surnames), rng)
+        combinations = SPLIT_NAME_COMBINATIONS.get(split, SPLIT_NAME_COMBINATIONS["train"])
+        first, sur = rng.choice(combinations)
+        return _apply_case_variation(f"{first} {sur}", rng)
 
     if field_name == "fathers_name":
-        males = SPLIT_MALE_FIRST_NAMES.get(split, _MALE_FIRST_NAMES)
-        surnames = SPLIT_SURNAMES.get(split, _SURNAMES)
-        return _apply_case_variation(_person_name(rng, males, surnames), rng)
+        combinations = SPLIT_MALE_NAME_COMBINATIONS.get(split, SPLIT_MALE_NAME_COMBINATIONS["train"])
+        first, sur = rng.choice(combinations)
+        return _apply_case_variation(f"{first} {sur}", rng)
 
     if field_name == "date_of_birth":
         span = (_DOB_END - _DOB_START).days

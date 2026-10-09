@@ -221,11 +221,10 @@ def test_pan_remains_strictly_uppercase() -> None:
         assert re.fullmatch(r"[A-Z]{3}P[A-Z]\d{4}[A-Z]", pan)
 
 
-def test_split_name_pools_are_disjoint() -> None:
+def test_complete_name_combinations_are_disjoint() -> None:
     from idocr.data.recognition.generator import (
-        SPLIT_FEMALE_FIRST_NAMES,
-        SPLIT_MALE_FIRST_NAMES,
-        SPLIT_SURNAMES,
+        SPLIT_MALE_NAME_COMBINATIONS,
+        SPLIT_NAME_COMBINATIONS,
     )
 
     splits = ("train", "valid", "test")
@@ -233,9 +232,32 @@ def test_split_name_pools_are_disjoint() -> None:
         for s2 in splits:
             if s1 >= s2:
                 continue
-            assert not (set(SPLIT_MALE_FIRST_NAMES[s1]) & set(SPLIT_MALE_FIRST_NAMES[s2]))
-            assert not (set(SPLIT_FEMALE_FIRST_NAMES[s1]) & set(SPLIT_FEMALE_FIRST_NAMES[s2]))
-            assert not (set(SPLIT_SURNAMES[s1]) & set(SPLIT_SURNAMES[s2]))
+            assert not (set(SPLIT_NAME_COMBINATIONS[s1]) & set(SPLIT_NAME_COMBINATIONS[s2]))
+            assert not (set(SPLIT_MALE_NAME_COMBINATIONS[s1]) & set(SPLIT_MALE_NAME_COMBINATIONS[s2]))
+
+
+def test_components_and_characters_shared_across_splits() -> None:
+    from idocr.data.recognition.generator import (
+        FEMALE_FIRST_NAMES,
+        MALE_FIRST_NAMES,
+        SPLIT_NAME_COMBINATIONS,
+        SURNAMES,
+    )
+
+    splits = ("train", "valid", "test")
+    all_firsts = set(MALE_FIRST_NAMES) | set(FEMALE_FIRST_NAMES)
+    all_surnames = set(SURNAMES)
+
+    for s in splits:
+        combs = SPLIT_NAME_COMBINATIONS[s]
+        split_firsts = {f for f, _ in combs}
+        split_surnames = {sur for _, sur in combs}
+        split_chars = {c for f, sur in combs for c in (f + sur)}
+
+        # Vast majority of names and 100% of surnames & characters appear in every split
+        assert len(split_firsts) > 0.95 * len(all_firsts)
+        assert len(split_surnames) == len(all_surnames)
+        assert len(split_chars) == 26  # A-Z full coverage in every split
 
 
 def test_generated_names_disjoint_across_splits() -> None:
