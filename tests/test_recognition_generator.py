@@ -219,3 +219,46 @@ def test_pan_remains_strictly_uppercase() -> None:
         pan = generate_field_text("pan_number", rng)
         assert pan.isupper()
         assert re.fullmatch(r"[A-Z]{3}P[A-Z]\d{4}[A-Z]", pan)
+
+
+def test_split_name_pools_are_disjoint() -> None:
+    from idocr.data.recognition.generator import (
+        SPLIT_FEMALE_FIRST_NAMES,
+        SPLIT_MALE_FIRST_NAMES,
+        SPLIT_SURNAMES,
+    )
+
+    splits = ("train", "valid", "test")
+    for s1 in splits:
+        for s2 in splits:
+            if s1 >= s2:
+                continue
+            assert not (set(SPLIT_MALE_FIRST_NAMES[s1]) & set(SPLIT_MALE_FIRST_NAMES[s2]))
+            assert not (set(SPLIT_FEMALE_FIRST_NAMES[s1]) & set(SPLIT_FEMALE_FIRST_NAMES[s2]))
+            assert not (set(SPLIT_SURNAMES[s1]) & set(SPLIT_SURNAMES[s2]))
+
+
+def test_generated_names_disjoint_across_splits() -> None:
+    splits = ("train", "valid", "test")
+    names_by_split: dict[str, set[str]] = {}
+    for s in splits:
+        rng = random.Random(100)
+        names = [generate_field_text("name", rng, split=s) for _ in range(500)]
+        names_by_split[s] = {re.sub(r"\s+", " ", n.strip().lower()) for n in names}
+
+    assert not (names_by_split["train"] & names_by_split["valid"])
+    assert not (names_by_split["train"] & names_by_split["test"])
+    assert not (names_by_split["valid"] & names_by_split["test"])
+
+
+def test_generated_fathers_names_disjoint_across_splits() -> None:
+    splits = ("train", "valid", "test")
+    names_by_split: dict[str, set[str]] = {}
+    for s in splits:
+        rng = random.Random(200)
+        names = [generate_field_text("fathers_name", rng, split=s) for _ in range(500)]
+        names_by_split[s] = {re.sub(r"\s+", " ", n.strip().lower()) for n in names}
+
+    assert not (names_by_split["train"] & names_by_split["valid"])
+    assert not (names_by_split["train"] & names_by_split["test"])
+    assert not (names_by_split["valid"] & names_by_split["test"])

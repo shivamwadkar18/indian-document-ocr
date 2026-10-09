@@ -158,15 +158,15 @@ def _image_filename(record_index: int, field_name: str) -> str:
     return f"{record_index:06d}_{field_name}.png"
 
 
-def _record_texts(rng: random.Random) -> dict[str, str]:
+def _record_texts(rng: random.Random, split: str = "train") -> dict[str, str]:
     """Sample one synthetic identity: one transcription per field."""
     texts = {
-        field_name: generate_field_text(field_name, rng)
+        field_name: generate_field_text(field_name, rng, split=split)
         for field_name in SUPPORTED_FIELDS
         if field_name != "pan_number"
     }
     surname = texts["name"].split()[-1]
-    texts["pan_number"] = generate_pan_number(rng, surname=surname)
+    texts["pan_number"] = generate_pan_number(rng, surname=surname, split=split)
     return texts
 
 
@@ -198,8 +198,8 @@ def generate_recognition_dataset(
 
     Raises:
         FileExistsError: if a previous dataset exists and ``overwrite`` is
-            false. With ``overwrite``, only :data:`MANAGED_ENTRIES` are
-            removed; other files in ``output_dir`` (e.g. ``smoke/``) are kept.
+        false. With ``overwrite``, only :data:`MANAGED_ENTRIES` are
+        removed; other files in ``output_dir`` (e.g. ``smoke/``) are kept.
     """
     root = Path(output_dir) if output_dir is not None else config.output_dir
     existing = existing_managed_entries(root)
@@ -234,7 +234,7 @@ def generate_recognition_dataset(
                 "w", encoding="utf-8", newline="\n"
             ) as annotations:
                 for record_index in range(records_per_split[split]):
-                    texts = _record_texts(text_rng)
+                    texts = _record_texts(text_rng, split=split)
                     for field_name in SUPPORTED_FIELDS:
                         doc_types = config.document_types[field_name]
                         rel_path = (
@@ -337,6 +337,8 @@ def validate_recognition_dataset(
     heights: list[int] = []
     doc_counter: Counter[str] = Counter()
 
+    names_by_split: dict[str, set[str]] = {s: set() for s in SPLITS}
+
     for split in SPLITS:
         split_dir = root / split
         annotations_path = split_dir / ANNOTATIONS_FILENAME
@@ -378,6 +380,11 @@ def validate_recognition_dataset(
                 result.errors.append(
                     f"{where}: document_type {sample.document_type!r} not allowed "
                     f"for {sample.field_name}"
+                )
+
+            if sample.field_name in ("name", "fathers_name"):
+                names_by_split[split].add(
+                    re.sub(r"\s+", " ", sample.text.strip().lower())
                 )
 
             field_counts[sample.field_name] += 1
@@ -424,6 +431,13 @@ def validate_recognition_dataset(
         missing = set(referenced) - on_disk
         if missing and not check_images:  # check_images reports each one
             result.errors.append(f"{split}: {len(missing)} annotated images missing")
+
+    for s1, s2 in (("train", "valid"), ("train", "test"), ("valid", "test")):
+        overlap = names_by_split[s1] & names_by_split[s2]
+        if overlap:
+            result.errors.append(
+                f"leakage between {s1} and {s2}: {len(overlap)} name/fathers_name strings overlap"
+            )
 
     result.by_document_type = dict(sorted(doc_counter.items()))
     if widths:

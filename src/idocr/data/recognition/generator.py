@@ -59,21 +59,48 @@ FALLBACK_FONT_PATHS: tuple[str, ...] = (
 _UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 _DIGITS = "0123456789"
 
-_MALE_FIRST_NAMES = (
-    "RAHUL", "AMIT", "SURESH", "RAJESH", "VIKRAM", "ANIL", "SANJAY", "ARJUN",
-    "KARAN", "ROHIT", "MANOJ", "DEEPAK", "VIJAY", "ASHOK", "RAVI", "NITIN",
-    "SUNIL", "PRAKASH", "MOHAN", "RAMESH", "ADITYA", "HARISH", "GOPAL", "KIRAN",
-)
-_FEMALE_FIRST_NAMES = (
-    "POOJA", "PRIYA", "NEHA", "ANJALI", "SUNITA", "KAVITA", "DIVYA", "MEERA",
-    "REKHA", "ANITA", "SNEHA", "SWATI", "LAKSHMI", "GEETA", "NISHA", "RITU",
-    "SHALINI", "ASHA", "SEEMA", "PREETI", "ANUSHKA", "DEEPA", "KOMAL", "USHA",
-)
-_SURNAMES = (
-    "JOSHI", "PATEL", "SHARMA", "VERMA", "GUPTA", "SINGH", "KUMAR", "REDDY",
-    "NAIR", "IYER", "MEHTA", "SHAH", "DESAI", "KULKARNI", "PATIL", "JADHAV",
-    "YADAV", "MISHRA", "PANDEY", "CHAUHAN", "RAO", "PILLAI", "BOSE", "DAS",
-)
+SPLIT_MALE_FIRST_NAMES: dict[str, tuple[str, ...]] = {
+    "train": (
+        "RAHUL", "AMIT", "SURESH", "RAJESH", "VIKRAM", "ANIL", "SANJAY", "ARJUN",
+        "KARAN", "ROHIT", "MANOJ", "DEEPAK", "VIJAY", "ASHOK", "RAVI", "NITIN",
+    ),
+    "valid": (
+        "SUNIL", "PRAKASH", "MOHAN", "RAMESH",
+    ),
+    "test": (
+        "ADITYA", "HARISH", "GOPAL", "KIRAN",
+    ),
+}
+
+SPLIT_FEMALE_FIRST_NAMES: dict[str, tuple[str, ...]] = {
+    "train": (
+        "POOJA", "PRIYA", "NEHA", "ANJALI", "SUNITA", "KAVITA", "DIVYA", "MEERA",
+        "REKHA", "ANITA", "SNEHA", "SWATI", "LAKSHMI", "GEETA", "NISHA", "RITU",
+    ),
+    "valid": (
+        "SHALINI", "ASHA", "SEEMA", "PREETI",
+    ),
+    "test": (
+        "ANUSHKA", "DEEPA", "KOMAL", "USHA",
+    ),
+}
+
+SPLIT_SURNAMES: dict[str, tuple[str, ...]] = {
+    "train": (
+        "JOSHI", "PATEL", "SHARMA", "VERMA", "GUPTA", "SINGH", "KUMAR", "REDDY",
+        "NAIR", "IYER", "MEHTA", "SHAH", "DESAI", "KULKARNI", "PATIL", "JADHAV",
+    ),
+    "valid": (
+        "YADAV", "MISHRA", "PANDEY", "CHAUHAN",
+    ),
+    "test": (
+        "RAO", "PILLAI", "BOSE", "DAS",
+    ),
+}
+
+_MALE_FIRST_NAMES = tuple(n for names in SPLIT_MALE_FIRST_NAMES.values() for n in names)
+_FEMALE_FIRST_NAMES = tuple(n for names in SPLIT_FEMALE_FIRST_NAMES.values() for n in names)
+_SURNAMES = tuple(n for names in SPLIT_SURNAMES.values() for n in names)
 
 _DOB_START = date(1950, 1, 1)
 _DOB_END = date(2007, 12, 31)
@@ -127,19 +154,28 @@ def _apply_case_variation(text: str, rng: random.Random) -> str:
     )
 
 
-def _person_name(rng: random.Random, first_names: tuple[str, ...]) -> str:
-    return f"{rng.choice(first_names)} {rng.choice(_SURNAMES)}"
+def _person_name(
+    rng: random.Random,
+    first_names: tuple[str, ...],
+    surnames: tuple[str, ...],
+) -> str:
+    return f"{rng.choice(first_names)} {rng.choice(surnames)}"
 
 
-def generate_pan_number(rng: random.Random, surname: str | None = None) -> str:
+def generate_pan_number(
+    rng: random.Random,
+    surname: str | None = None,
+    split: str = "train",
+) -> str:
     """Sample an individual-holder PAN.
 
     Structure: 3 random letters, ``P`` (individual holder), the surname's
     initial, 4 random digits, 1 random letter. When ``surname`` is not
-    given, one is drawn from the synthetic surname list.
+    given, one is drawn from the synthetic surname list for ``split``.
     """
     if surname is None:
-        surname = rng.choice(_SURNAMES)
+        surname_pool = SPLIT_SURNAMES.get(split, _SURNAMES)
+        surname = rng.choice(surname_pool)
     initial = surname.strip()[:1].upper()
     if not initial or initial not in _UPPERCASE:
         raise ValueError(f"surname must start with a Latin letter: {surname!r}")
@@ -153,8 +189,12 @@ def generate_pan_number(rng: random.Random, surname: str | None = None) -> str:
     )
 
 
-def generate_field_text(field_name: str, rng: random.Random) -> str:
-    """Sample one transcription in the validated format for ``field_name``.
+def generate_field_text(
+    field_name: str,
+    rng: random.Random,
+    split: str = "train",
+) -> str:
+    """Sample one transcription in the validated format for ``field_name`` and ``split``.
 
     Formats:
         name, fathers_name: Latin letters (uppercase/title-case/mixed-case) and spaces
@@ -164,11 +204,16 @@ def generate_field_text(field_name: str, rng: random.Random) -> str:
         pan_number: AAAP + surname initial + 4 digits + 1 letter (individual, uppercase)
     """
     if field_name == "name":
-        first_names = rng.choice((_MALE_FIRST_NAMES, _FEMALE_FIRST_NAMES))
-        return _apply_case_variation(_person_name(rng, first_names), rng)
+        males = SPLIT_MALE_FIRST_NAMES.get(split, _MALE_FIRST_NAMES)
+        females = SPLIT_FEMALE_FIRST_NAMES.get(split, _FEMALE_FIRST_NAMES)
+        surnames = SPLIT_SURNAMES.get(split, _SURNAMES)
+        first_names = rng.choice((males, females))
+        return _apply_case_variation(_person_name(rng, first_names, surnames), rng)
 
     if field_name == "fathers_name":
-        return _apply_case_variation(_person_name(rng, _MALE_FIRST_NAMES), rng)
+        males = SPLIT_MALE_FIRST_NAMES.get(split, _MALE_FIRST_NAMES)
+        surnames = SPLIT_SURNAMES.get(split, _SURNAMES)
+        return _apply_case_variation(_person_name(rng, males, surnames), rng)
 
     if field_name == "date_of_birth":
         span = (_DOB_END - _DOB_START).days
@@ -186,7 +231,7 @@ def generate_field_text(field_name: str, rng: random.Random) -> str:
         return " ".join(digits[i:i + 4] for i in range(0, 12, 4))
 
     if field_name == "pan_number":
-        return generate_pan_number(rng)
+        return generate_pan_number(rng, split=split)
 
     raise ValueError(
         f"unsupported field {field_name!r}; expected one of {SUPPORTED_FIELDS}"
@@ -245,8 +290,8 @@ class SyntheticTextGenerator:
         self._font = ImageFont.truetype(str(self.font_path), self.config.font_size)
         self._rng = random.Random(seed)
 
-    def generate_text(self, field_name: str) -> str:
-        return generate_field_text(field_name, self._rng)
+    def generate_text(self, field_name: str, split: str = "train") -> str:
+        return generate_field_text(field_name, self._rng, split=split)
 
     def render(self, text: str) -> Image.Image:
         """Render ``text`` into a preprocessed grayscale ``L`` image."""
@@ -309,8 +354,8 @@ class SyntheticTextGenerator:
             vertical_padding=cfg.vertical_padding,
         )
 
-    def generate(self, field_name: str) -> SyntheticTextSample:
-        text = self.generate_text(field_name)
+    def generate(self, field_name: str, split: str = "train") -> SyntheticTextSample:
+        text = self.generate_text(field_name, split=split)
         return SyntheticTextSample(
             field_name=field_name,
             text=text,

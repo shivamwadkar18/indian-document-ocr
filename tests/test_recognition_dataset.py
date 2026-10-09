@@ -161,6 +161,18 @@ def test_pan_structure_and_surname(dataset_dir: Path) -> None:
             assert r["text"][4] == surname[0].upper()
 
 
+def test_disjoint_name_and_fathers_name_across_splits(dataset_dir: Path) -> None:
+    names_by_split: dict[str, set[str]] = {s: set() for s in SPLITS}
+    for split in SPLITS:
+        for r in _records(dataset_dir, split):
+            if r["field_name"] in ("name", "fathers_name"):
+                names_by_split[split].add(re.sub(r"\s+", " ", r["text"].strip().lower()))
+
+    assert not (names_by_split["train"] & names_by_split["valid"])
+    assert not (names_by_split["train"] & names_by_split["test"])
+    assert not (names_by_split["valid"] & names_by_split["test"])
+
+
 def test_document_types(dataset_dir: Path, small_config) -> None:
     for split in SPLITS:
         for r in _records(dataset_dir, split):
