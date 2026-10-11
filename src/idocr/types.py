@@ -105,7 +105,14 @@ class RecognizedRegion:
     recognition: RecognitionResult
 
     def to_dict(self) -> dict[str, Any]:
-        return {**self.region.to_dict(), **self.recognition.to_dict()}
+        # "confidence" is the recognition confidence (both dicts have the key);
+        # the explicit keys keep the detection confidence visible too.
+        return {
+            **self.region.to_dict(),
+            **self.recognition.to_dict(),
+            "detection_confidence": self.region.confidence,
+            "recognition_confidence": self.recognition.confidence,
+        }
 
 
 @dataclass
@@ -170,6 +177,9 @@ class PipelineResult:
     regions: list[RecognizedRegion] = field(default_factory=list)
     fields: dict[str, ExtractedField] = field(default_factory=dict)
     validation: ValidationResult | None = None
+    # Pipeline-level problems (skipped detections, missing fields, ...). Fields
+    # that could not be read stay ``value=None``; nothing is filled in.
+    issues: list[ValidationIssue] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -179,4 +189,5 @@ class PipelineResult:
             "regions": [r.to_dict() for r in self.regions],
             "fields": {k: v.to_dict() for k, v in self.fields.items()},
             "validation": self.validation.to_dict() if self.validation else None,
+            "issues": [i.to_dict() for i in self.issues],
         }

@@ -1,0 +1,15 @@
+# Inference assets for DocumentPipeline.from_config / scripts/run_inference.py.
+# Relative paths resolve against the project root. The weights are not in git:
+# copy them from Google Drive into models/ (git-ignored) or pass absolute paths.
+detector_weights: models/detector/best.pt        # YOLOv8n field detector (6 classes)
+recognizer_checkpoint: models/recognizer/best.pt # CRNN checkpoint (mixed-case vocab)
+device: cpu                                      # or "cuda" / "0" on a GPU machine
+
+detector:        # UltralyticsFieldDetector options
+  imgsz: 640
+  conf: 0.25
+  iou: 0.70
+  max_det: 300
+
+recognizer:      # CRNNRecognizer options
+  batch_size: 64

@@ -278,3 +278,38 @@ protection).
 
 - **New tests**: 32 · **Recognition tests** (generator, schema, preprocessing, dataset, recognizer, training): 91 passed
 - **Full suite**: **235 passed, 2 skipped** (detector-inference tests that need local model assets)
+
+---
+
+## 11. Aadhaar + PAN Inference Pipeline v1
+
+`DocumentPipeline` (`src/idocr/pipeline/document_pipeline.py`) is the single
+inference entry point: image → YOLO field detection → document type → clipped
+crops → CRNN recognition (`preprocess_ocr_crop` inside `CRNNRecognizer`) →
+fields → `PipelineResult.to_dict()`.
+
+```python
+from idocr.pipeline import DocumentPipeline
+pipe = DocumentPipeline.from_config("configs/inference.yaml")   # or .from_assets(det_pt, crnn_pt, device=...)
+result = pipe.run_file("card.jpg")                              # document_type="aadhaar" / "pan" optional
+result.to_dict()
+```
+
+CLI: `python scripts/run_inference.py --image card.jpg [--detector-weights … --recognizer-checkpoint … --device cuda --document-type pan]`.
+
+- **Document type:** given, from a classifier, or (no classifier yet) inferred
+  from detected fields only one document has (Aadhaar: `aadhaar_number`,
+  `gender`; PAN: `pan_number`, `fathers_name`).
+- **Fields:** Aadhaar/PAN extractors take the most confident detection per
+  class with non-empty text; field confidence = detection × recognition.
+  Undetected or unreadable fields stay `null` — nothing is filled in.
+- **`issues`** (new on `PipelineResult`): `empty_crop`, `unknown_class`,
+  `missing_field`, `unexpected_field`, `duplicate_field`,
+  `unknown_document_type`, `ambiguous_document_type`.
+- **Safety checks:** input must be H×W×3 uint8; boxes are clipped and crops
+  under 2 px are skipped; detector classes must equal the project mapping;
+  both model files are checked before loading.
+- **Assets:** weights are on Google Drive; place them at the paths in
+  `configs/inference.yaml` (`models/`, git-ignored) or pass paths/flags.
+- **Tests:** 24 in `tests/test_pipeline.py` (mocked detector, real tiny CRNN
+  checkpoint, no real documents). Full suite: 287 passed, 2 skipped.

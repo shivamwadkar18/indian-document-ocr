@@ -1,22 +1,14 @@
-"""PAN field extraction (not implemented).
+"""PAN field extraction from the field-level detector's classes.
 
-TODO(after audit):
-  - Field set: confirm against the dataset's labels.
-  - Card layout variants present in the data (older vs. newer PAN designs).
+Fields: ``name``, ``fathers_name``, ``date_of_birth``, ``pan_number``
+(``DOCUMENT_FIELDS`` in ``idocr.data.annotation_schema``).
 """
 
 from __future__ import annotations
 
-from typing import Sequence
-
-from idocr.extraction.base import FieldExtractor
-from idocr.types import DocumentType, ExtractedField, RecognizedRegion
+from idocr.extraction.base import DetectedFieldExtractor
+from idocr.types import DocumentType
 
 
-class PanExtractor(FieldExtractor):
+class PanExtractor(DetectedFieldExtractor):
     document_type = DocumentType.PAN
-
-    def extract(
-        self, regions: Sequence[RecognizedRegion], image_size: tuple[int, int]
-    ) -> dict[str, ExtractedField]:
-        raise NotImplementedError("PAN extraction rules are defined after the dataset audit.")
