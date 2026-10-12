@@ -313,3 +313,32 @@ CLI: `python scripts/run_inference.py --image card.jpg [--detector-weights … -
   `configs/inference.yaml` (`models/`, git-ignored) or pass paths/flags.
 - **Tests:** 24 in `tests/test_pipeline.py` (mocked detector, real tiny CRNN
   checkpoint, no real documents). Full suite: 287 passed, 2 skipped.
+
+---
+
+## 12. Private Real-Crop OCR Benchmark (tooling)
+
+Manually verified benchmark to measure the recognizer on real crops, separately
+from detector errors: ground-truth boxes of the detector **test** split.
+
+- **Code:** `src/idocr/evaluation/real_benchmark.py`, CLI
+  `scripts/real_crop_benchmark.py` (`create` / `status` / `transcribe` /
+  `evaluate`), tests `tests/test_real_benchmark.py`.
+- **Selection:** seeded queue per field, documents shuffled and one box per
+  document before any repeat; no size or quality filter. Skipped / unclear
+  crops are replaced from the same fixed queue. Target 40 verified per field.
+- **Storage (private only):** `manifest.json` (immutable: seed, queues,
+  source mapping, crop SHA-256), `crops/` (untouched crop pixels),
+  `references.jsonl` (append-only, fsync'd; latest record per sample wins),
+  `predictions/` and `reports/`. Directories inside the repo are refused unless
+  under git-ignored `data/` or `experiments/`.
+- **Transcription:** enlarged display copy, opaque sample ID only, no model
+  loaded or prediction shown; reference typed twice; whitespace-padded or empty
+  entries are rejected, never rewritten.
+- **Metrics:** raw (case-sensitive) and `casefold` CER / exact match, overall
+  and per field; share of `aadhaar_number` / `date_of_birth` predictions
+  containing letters; references with characters outside the model vocabulary.
+  Reports contain metrics only.
+- **Local dry run:** test split gives 2,612 candidates (256–654 per field,
+  nearly all from distinct documents); dry-run output deleted. No references
+  collected yet; the earlier 27-sample pilot is not reused.
