@@ -47,7 +47,7 @@ from idocr.types import (
 )
 from idocr.utils.config import load_config
 from idocr.utils.image import crop, image_size, load_image
-from idocr.validation import Validator
+from idocr.validation import Validator, default_validators
 
 #: Crops narrower or shorter than this (after clipping) are not recognized.
 MIN_CROP_SIDE = 2
@@ -170,7 +170,13 @@ class DocumentPipeline:
             self._field_issues(result)
             validator = self.validators.get(document_type)
             if validator is not None:
-                result.validation = validator.validate(result.fields)
+                try:
+                    result.validation = validator.validate(result.fields)
+                except Exception as exc:
+                    result.issues.append(ValidationIssue(
+                        "validation_error",
+                        f"validator failed for {document_type.value}: {exc}",
+                    ))
         return result
 
     def run_file(self, path: str | Path, document_type: DocumentType | str | None = None) -> PipelineResult:
@@ -247,6 +253,7 @@ class DocumentPipeline:
         device: str = "cpu",
         detector_options: Mapping[str, Any] | None = None,
         recognizer_options: Mapping[str, Any] | None = None,
+        validators: Mapping[DocumentType, Validator] | None = None,
     ) -> "DocumentPipeline":
         """Load the trained YOLO field detector and CRNN recognizer.
 
@@ -279,6 +286,7 @@ class DocumentPipeline:
             detector=detector,
             recognizer=recognizer,
             extractors={DocumentType.AADHAAR: AadhaarExtractor(), DocumentType.PAN: PanExtractor()},
+            validators=default_validators() if validators is None else validators,
         )
 
     @classmethod

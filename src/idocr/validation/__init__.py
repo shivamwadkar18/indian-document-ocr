@@ -1,10 +1,42 @@
 """Validation of extracted fields.
 
-TODO(owner): decide the rule set per document type. Candidate checks that do
-not depend on the datasets: PAN format pattern, Aadhaar checksum (Verhoeff),
-date sanity (DOB in the past, DL validity after issue date).
+Provides field-level validators and algorithms (Verhoeff checksum, PAN structure,
+and calendar date validation) for Indian identity documents (Aadhaar, PAN).
 """
 
-from idocr.validation.base import Validator
+from __future__ import annotations
 
-__all__ = ["Validator"]
+from idocr.types import DocumentType
+from idocr.validation.aadhaar import AadhaarValidator
+from idocr.validation.base import Validator
+from idocr.validation.pan import PanValidator
+from idocr.validation.rules import (
+    validate_aadhaar_number,
+    validate_date_of_birth,
+    validate_pan_number,
+)
+from idocr.validation.verhoeff import (
+    compute_verhoeff_check_digit,
+    validate_verhoeff,
+)
+
+
+def default_validators() -> dict[DocumentType, Validator]:
+    """One validator per supported document type."""
+    return {
+        DocumentType.AADHAAR: AadhaarValidator(),
+        DocumentType.PAN: PanValidator(),
+    }
+
+
+__all__ = [
+    "AadhaarValidator",
+    "PanValidator",
+    "Validator",
+    "compute_verhoeff_check_digit",
+    "default_validators",
+    "validate_aadhaar_number",
+    "validate_date_of_birth",
+    "validate_pan_number",
+    "validate_verhoeff",
+]
