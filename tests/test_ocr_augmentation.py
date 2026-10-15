@@ -24,9 +24,12 @@ from idocr.data.recognition.generator import (
 
 HEIGHT = DEFAULT_TARGET_HEIGHT + 2 * DEFAULT_VERTICAL_PADDING
 ENABLED = OcrAugmentConfig(enabled=True)
+# Every generic step; the field-targeted glyph scale / spacing step needs sample
+# metadata and is covered in test_glyph_scale_augmentation.py.
 ALL_ON = dataclasses.replace(
     ENABLED,
-    **{f.name: 1.0 for f in dataclasses.fields(OcrAugmentConfig) if f.name.startswith("p_")},
+    **{f.name: 1.0 for f in dataclasses.fields(OcrAugmentConfig)
+       if f.name.startswith("p_") and f.name not in ("p_glyph_scale", "p_hcompress")},
 )
 
 

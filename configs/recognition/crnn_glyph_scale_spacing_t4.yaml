@@ -1,0 +1,36 @@
+# Controlled experiment: smaller glyphs and tighter character spacing.
+# Identical to crnn_mixedcase_augmented_t4.yaml (same data, model, training
+# parameters and generic augmentation) except for the experiment name and the
+# field-targeted glyph scale / spacing step below (train split only).
+#
+# Motivation (dataset diagnosis, at model input): real Aadhaar-number text is
+# ~12 px/char at ~52% of input height and real DOB ~14 px/char, versus ~24-25
+# px/char at ~75% for the synthetic crops. Real PAN scale already matches, so
+# pan_number is not targeted.
+experiment_name: crnn_glyph_scale_spacing_t4_10ep
+dataset_dir: data/processed/recognition
+output_dir: experiments/runs
+epochs: 10
+batch_size: 128
+lr: 0.001
+weight_decay: 0.0001
+grad_clip: 5.0
+num_workers: 2
+device: cuda
+amp: true
+seed: 42
+max_train_samples: null     # full 24,000 train samples
+max_valid_samples: null     # full 3,000 valid samples
+hidden_size: 128
+lstm_layers: 2
+dropout: 0.1
+log_every: 10
+augmentation:
+  enabled: true
+  # field-targeted glyph scale / spacing (GlyphScaleSpacing)
+  p_glyph_scale: 0.7
+  glyph_height_range: [0.45, 0.80]   # ink height / model input height
+  p_hcompress: 0.7
+  hcompress_range: [0.5, 1.0]        # applied before the generic hscale step
+  min_char_width: 10.0               # px per char at model input (>= 2.5 CTC frames)
+  scale_fields: [aadhaar_number, date_of_birth, name]

@@ -44,7 +44,7 @@ class RecognitionDataset(Dataset):
         *,
         image_height: int,
         limit: int | None = None,
-        augment: Callable[[Image.Image, np.random.Generator], Image.Image] | None = None,
+        augment: Callable[..., Image.Image] | None = None,  # (image, rng, *, field_name, text)
         seed: int = 0,
     ) -> None:
         self.split_dir = Path(split_dir)
@@ -73,7 +73,9 @@ class RecognitionDataset(Dataset):
                 f"{sample.image_path}: height {image.height} != {self.image_height}"
             )
         if self.augment is not None:
-            image = self.augment(image, np.random.default_rng([self.seed, self.epoch, index]))
+            # field_name / text come from the sample's own annotation record.
+            image = self.augment(image, np.random.default_rng([self.seed, self.epoch, index]),
+                                 field_name=sample.field_name, text=sample.text)
         return image, self.targets[index], sample
 
 

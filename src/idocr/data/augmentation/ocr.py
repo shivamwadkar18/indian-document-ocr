@@ -14,7 +14,11 @@ crops. Measured on the detector valid split, real field crops are:
 :func:`augment_line_image` takes a stored (already preprocessed) crop,
 removes its padding, applies the steps below and runs
 :func:`preprocess_ocr_crop` again, so the output height and padding match
-the CRNN input exactly. The transcription is never changed. The clean
+the CRNN input exactly. The transcription is never changed.
+
+:class:`GlyphScaleSpacing` (off by default) additionally shrinks glyph height
+and character spacing for the fields in ``scale_fields``; it needs each
+sample's annotated ``field_name`` and refuses to run without it. The clean
 generator and dataset are untouched; augmentation is disabled by default.
 
 All randomness comes from the ``np.random.Generator`` passed in, so a given
@@ -38,6 +42,7 @@ from idocr.data.preprocessing.ocr import (
     DEFAULT_VERTICAL_PADDING,
     preprocess_ocr_crop,
 )
+from idocr.data.recognition.generator import SUPPORTED_FIELDS
 from idocr.types import ImageArray
 
 
@@ -76,13 +81,21 @@ class OcrAugmentConfig:
     jpeg_quality_range: tuple[int, int] = (30, 90)
     p_noise: float = 0.5
     max_noise_std: float = 6.0
+    # glyph scale / spacing, only for ``scale_fields``; off by default (see GlyphScaleSpacing)
+    p_glyph_scale: float = 0.0
+    glyph_height_range: tuple[float, float] = (0.45, 0.80)  # ink height / model input height
+    p_hcompress: float = 0.0
+    hcompress_range: tuple[float, float] = (0.5, 1.0)
+    min_char_width: float = 10.0  # px per character at model input (CTC frames = width / 4)
+    scale_fields: tuple[str, ...] = ("aadhaar_number", "date_of_birth", "name")
 
     def __post_init__(self) -> None:
         for f in fields(self):
             if f.name.startswith("p_") and not 0.0 <= getattr(self, f.name) <= 1.0:
                 raise ValueError(f"{f.name} must be in [0, 1]")
         for name in ("hscale_range", "background_range", "ink_range", "tint_range",
-                     "downsample_height_range", "jpeg_quality_range"):
+                     "downsample_height_range", "jpeg_quality_range", "glyph_height_range",
+                     "hcompress_range"):
             lo, hi = getattr(self, name)
             if lo > hi:
                 raise ValueError(f"{name} must be (low, high)")
@@ -90,6 +103,19 @@ class OcrAugmentConfig:
             raise ValueError("hscale must be positive and downsample height >= 8")
         if self.background_range[0] - self.ink_range[1] < 0 or self.min_contrast <= 0:
             raise ValueError("background_range must sit above ink_range")
+        if not 0 < self.glyph_height_range[0] <= self.glyph_height_range[1] <= 1:
+            raise ValueError("glyph_height_range must be within (0, 1]")
+        if not 0 < self.hcompress_range[0] <= self.hcompress_range[1] <= 1:
+            raise ValueError("hcompress_range must be within (0, 1]")
+        if self.min_char_width <= 0:
+            raise ValueError("min_char_width must be positive")
+        unknown = sorted(set(self.scale_fields) - set(SUPPORTED_FIELDS))
+        if unknown:
+            raise ValueError(f"scale_fields: unknown fields {unknown}")
+
+    @property
+    def glyph_scale_active(self) -> bool:
+        return self.p_glyph_scale > 0 or self.p_hcompress > 0
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None) -> "OcrAugmentConfig":
@@ -191,6 +217,78 @@ class EdgeLine(_Step):
         shade = int(rng.integers(0, 110))
         ImageDraw.Draw(im).line([(x0, y), (x1, y)], fill=shade, width=1)
         return np.asarray(im)
+
+
+def _ink_rows(image: np.ndarray) -> tuple[int, int] | None:
+    """``(top, bottom)`` rows (end exclusive) holding any pixel darker than the background.
+
+    Deliberately loose (anything 10% of the ink/background range below the
+    background counts), so only blank rows fall outside. None if no text is found.
+    """
+    lo, bg = np.percentile(image, (1, 90))
+    if bg - lo < 30:
+        return None
+    rows = np.flatnonzero((image < bg - 0.1 * (bg - lo)).any(axis=1))
+    return int(rows[0]), int(rows[-1]) + 1
+
+
+class GlyphScaleSpacing:
+    """Smaller glyphs and tighter horizontal spacing (field-targeted).
+
+    Real Aadhaar-number / DOB crops reach the model with text at ~52% of the
+    input height and 12-14 px per character, versus ~75% and ~25 px for the
+    synthetic crops. Runs on the clean inner crop before the generic steps:
+
+    - glyph scale: blank background rows are added (or removed) around the
+      ink so it fills ``glyph_height_range`` of the model input height after
+      preprocessing; ink rows are never removed;
+    - horizontal compression: the whole crop is resized to ``hcompress_range``
+      of its width, so nothing is clipped.
+
+    The result never drops below ``min_char_width`` px per character at the
+    model input (keeps enough CTC frames), unless the crop already was.
+    """
+
+    def __init__(self, cfg: OcrAugmentConfig, *, target_height: int, vertical_padding: int) -> None:
+        self.cfg = cfg
+        self.target_height = target_height
+        self.input_height = target_height + 2 * vertical_padding
+
+    def __call__(self, image: ImageArray, rng: np.random.Generator, n_chars: int) -> ImageArray:
+        cfg = self.cfg
+        do_scale = rng.random() < cfg.p_glyph_scale
+        do_compress = rng.random() < cfg.p_hcompress
+        frac = rng.uniform(*cfg.glyph_height_range)
+        scale = rng.uniform(*cfg.hcompress_range)
+        if not do_compress:
+            scale = 1.0
+        rows = _ink_rows(image)
+        if not (do_scale or do_compress) or rows is None or n_chars < 1:
+            return image
+        top, bottom = rows
+        ink_h = bottom - top
+        h, w = image.shape
+        t = self.target_height
+        new_h = max(ink_h, round(ink_h * t / (frac * self.input_height))) if do_scale else h
+
+        # px per character at model input = w * scale * t / new_h / n_chars
+        needed_scale = cfg.min_char_width * n_chars * new_h / (w * t)
+        scale = max(scale, min(1.0, needed_scale))
+        if needed_scale > 1.0:
+            max_h = int(w * t / (cfg.min_char_width * n_chars))
+            new_h = min(new_h, max(max_h, h))  # >= ink_h, as h and new_h are
+
+        bg = _background(image)
+        if new_h >= h:
+            pad_top = (new_h - h) // 2
+            out = np.pad(image, ((pad_top, new_h - h - pad_top), (0, 0)), constant_values=bg)
+        else:  # remove only blank rows, keeping the ink centred where possible
+            cut = h - new_h
+            cut_top = min(top, max(cut - (h - bottom), cut // 2))
+            out = image[cut_top: cut_top + new_h]
+        if scale < 1.0:
+            out = _resize(np.ascontiguousarray(out), round(w * scale), new_h)
+        return np.ascontiguousarray(out)
 
 
 # --- photometric -----------------------------------------------------------
@@ -318,8 +416,15 @@ class OcrLineAugmenter:
         self.preprocessing = dict(target_height=target_height, horizontal_padding=horizontal_padding,
                                   vertical_padding=vertical_padding)
         self.pipeline = build_ocr_augmentation(config)
+        self.glyph_step = (
+            GlyphScaleSpacing(config, target_height=target_height, vertical_padding=vertical_padding)
+            if config.glyph_scale_active else None
+        )
 
-    def __call__(self, image: Image.Image, rng: np.random.Generator) -> Image.Image:
+    def __call__(self, image: Image.Image, rng: np.random.Generator, *,
+                 field_name: str | None = None, text: str | None = None) -> Image.Image:
+        """``field_name`` and ``text`` (the sample's annotation) are required
+        when the field-targeted glyph scale / spacing step is active."""
         if not self.config.enabled:
             return image
         v = self.preprocessing["vertical_padding"]
@@ -328,10 +433,21 @@ class OcrLineAugmenter:
         inner = arr[v: arr.shape[0] - v, h: arr.shape[1] - h]
         if inner.size == 0:
             raise ValueError(f"image {image.size} is smaller than its padding")
-        out = self.pipeline(np.ascontiguousarray(inner), rng)
+        out = np.ascontiguousarray(inner)
+        if self.glyph_step is not None:
+            if field_name not in SUPPORTED_FIELDS or not text:
+                raise ValueError(
+                    "glyph scale / spacing is field-targeted: each sample needs a known "
+                    f"field_name and its text (got field_name={field_name!r})"
+                )
+            if field_name in self.config.scale_fields:
+                # Child stream: the generic steps below get the same draws as without this step.
+                out = self.glyph_step(out, rng.spawn(1)[0], len(text))
+        out = self.pipeline(out, rng)
         return preprocess_ocr_crop(Image.fromarray(out), **self.preprocessing)
 
 
-def augment_line_image(image: Image.Image, config: OcrAugmentConfig, seed: int | list[int]) -> Image.Image:
+def augment_line_image(image: Image.Image, config: OcrAugmentConfig, seed: int | list[int], *,
+                       field_name: str | None = None, text: str | None = None) -> Image.Image:
     """Convenience wrapper: augment one stored crop with a fixed seed."""
-    return OcrLineAugmenter(config)(image, np.random.default_rng(seed))
+    return OcrLineAugmenter(config)(image, np.random.default_rng(seed), field_name=field_name, text=text)
